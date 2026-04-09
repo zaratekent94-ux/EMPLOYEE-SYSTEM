@@ -1,3 +1,8 @@
+# Presented by:
+## BSCS 1A
+## Kent S. Zarate, Charlene I. Vano, Christian Maki M. Bayonas, Antonio Gabriel V. Lupian
+
+
 # Title
 ## The Employee Information And Leave Management System
 
