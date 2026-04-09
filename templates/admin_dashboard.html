@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EILMS - Admin Dashboard</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+body { font-family: 'Inter', sans-serif; background-color: #f3f6f9; }
+.sidebar { background-color: #1a233a; }
+.nav-link { transition: all 0.3s; cursor: pointer; }
+.nav-link.active { background-color: #4382f6; }
+.page-section { display: none; }
+.page-section.active { display: block; }
+</style>
+</head>
+
+<body class="flex h-screen">
+
+<!-- SIDEBAR -->
+<aside class="sidebar w-64 text-white flex flex-col p-4">
+    <div class="text-2xl font-bold px-4 py-6 border-b mb-4">EILMS</div>
+
+    <nav class="flex-1 space-y-2">
+        <div onclick="showPage('home', this)" class="nav-link active p-3 rounded-lg flex items-center gap-2">
+            <i class="fas fa-home"></i> Home
+        </div>
+
+        <div onclick="showPage('add-employee', this)" class="nav-link p-3 rounded-lg flex items-center gap-2">
+            <i class="fas fa-user-plus"></i> Add Employee
+        </div>
+
+        <div onclick="showPage('view-info', this)" class="nav-link p-3 rounded-lg flex items-center gap-2">
+            <i class="fas fa-users"></i> View Info
+        </div>
+    </nav>
+</aside>
+
+<!-- MAIN -->
+<main class="flex-1 p-6 overflow-y-auto">
+
+<!-- HOME -->
+<section id="home" class="page-section active">
+    <h1 class="text-2xl font-bold mb-4">Dashboard</h1>
+    <p>Total Employees: <span id="count">0</span></p>
+</section>
+
+<!-- ADD EMPLOYEE -->
+<section id="add-employee" class="page-section">
+    <div class="bg-white p-6 rounded shadow-md max-w-2xl">
+
+        <h2 class="text-xl font-bold mb-4">Register Employee</h2>
+
+        <form id="employeeForm" class="grid grid-cols-2 gap-4">
+
+            <input type="text" id="form-name" placeholder="Full Name" class="border p-2 rounded" required>
+            <input type="text" id="form-dept" placeholder="Department" class="border p-2 rounded">
+
+            <input type="text" id="form-pos" placeholder="Position" class="border p-2 rounded">
+            <input type="text" id="form-phone" placeholder="Contact" class="border p-2 rounded">
+
+            <!-- 🔥 LOGIN ACCOUNT -->
+            <input type="text" id="form-username" placeholder="Username" class="border p-2 rounded" required>
+            <input type="password" id="form-password" placeholder="Password" class="border p-2 rounded" required>
+
+            <button class="col-span-2 bg-blue-600 text-white p-3 rounded font-bold">
+                Create Account
+            </button>
+
+        </form>
+    </div>
+</section>
+
+<!-- VIEW -->
+<section id="view-info" class="page-section">
+    <h2 class="text-xl font-bold mb-4">Employees</h2>
+
+    <table class="w-full bg-white shadow rounded">
+        <thead class="bg-gray-800 text-white">
+            <tr>
+                <th class="p-3">Name</th>
+                <th class="p-3">Dept</th>
+                <th class="p-3">Position</th>
+                <th class="p-3">Contact</th>
+            </tr>
+        </thead>
+
+        <tbody id="tableBody"></tbody>
+    </table>
+</section>
+
+</main>
+
+<script>
+
+// NAVIGATION
+function showPage(id, el) {
+    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+
+    document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+}
+
+// DATA (FRONTEND DISPLAY ONLY)
+let employees = [];
+
+// FORM SUBMIT → SEND TO FLASK
+document.getElementById("employeeForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const emp = {
+        name: document.getElementById("form-name").value,
+        dept: document.getElementById("form-dept").value,
+        pos: document.getElementById("form-pos").value,
+        phone: document.getElementById("form-phone").value,
+    };
+
+    const username = document.getElementById("form-username").value;
+    const password = document.getElementById("form-password").value;
+
+    // SEND TO BACKEND
+    const formData = new URLSearchParams();
+    formData.append("username", username);
+    formData.append("password", password);
+
+    try {
+        const res = await fetch("/create_employee", {
+            method: "POST",
+            body: formData
+        });
+
+        if (res.ok) {
+            alert("Employee account created!");
+
+            // ADD TO TABLE (frontend)
+            employees.push(emp);
+            renderTable();
+
+            document.getElementById("employeeForm").reset();
+        } else {
+            alert("User already exists!");
+        }
+
+    } catch {
+        alert("Server error!");
+    }
+});
+
+// RENDER TABLE
+function renderTable() {
+    const tbody = document.getElementById("tableBody");
+    tbody.innerHTML = "";
+
+    employees.forEach(e => {
+        tbody.innerHTML += `
+            <tr>
+                <td class="p-3">${e.name}</td>
+                <td class="p-3">${e.dept}</td>
+                <td class="p-3">${e.pos}</td>
+                <td class="p-3">${e.phone}</td>
+            </tr>
+        `;
+    });
+
+    document.getElementById("count").innerText = employees.length;
+}
+
+</script>
+
+</body>
+</html>
