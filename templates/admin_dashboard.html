@@ -15,6 +15,7 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f6f9; }
 .nav-link.active { background-color: #4382f6; }
 .page-section { display: none; }
 .page-section.active { display: block; }
+tbody tr:nth-child(even) { background-color: #f9fafb; }
 </style>
 </head>
 
@@ -25,16 +26,20 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f6f9; }
     <div class="text-2xl font-bold px-4 py-6 border-b mb-4">EILMS</div>
 
     <nav class="flex-1 space-y-2">
-        <div onclick="showPage('home', this)" class="nav-link active p-3 rounded-lg flex items-center gap-2">
+        <div onclick="showPage('home', this)" class="nav-link active p-3 rounded-lg">
             <i class="fas fa-home"></i> Home
         </div>
 
-        <div onclick="showPage('add-employee', this)" class="nav-link p-3 rounded-lg flex items-center gap-2">
+        <div onclick="showPage('add-employee', this)" class="nav-link p-3 rounded-lg">
             <i class="fas fa-user-plus"></i> Add Employee
         </div>
 
-        <div onclick="showPage('view-info', this)" class="nav-link p-3 rounded-lg flex items-center gap-2">
+        <div onclick="showPage('view-info', this)" class="nav-link p-3 rounded-lg">
             <i class="fas fa-users"></i> View Info
+        </div>
+
+        <div onclick="logout()" class="nav-link p-3 rounded-lg">
+            <i class="fas fa-sign-out-alt"></i> Log Out
         </div>
     </nav>
 </aside>
@@ -54,41 +59,42 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f6f9; }
 
         <h2 class="text-xl font-bold mb-4">Register Employee</h2>
 
-        <form id="employeeForm" class="grid grid-cols-2 gap-4">
+        <!-- ✅ FIXED FORM -->
+        <form id="employeeForm" method="POST" action="/create_employee" class="grid grid-cols-2 gap-4">
 
-            <input type="text" id="form-name" placeholder="Full Name" class="border p-2 rounded" required>
-            <input type="text" id="form-dept" placeholder="Department" class="border p-2 rounded">
+            <input type="text" name="name" id="form-name" placeholder="Full Name" class="border p-2 rounded" required>
+            <input type="text" name="dept" id="form-dept" placeholder="Department" class="border p-2 rounded">
 
-            <input type="text" id="form-pos" placeholder="Position" class="border p-2 rounded">
-            <input type="text" id="form-phone" placeholder="Contact" class="border p-2 rounded">
+            <input type="text" name="position" id="form-pos" placeholder="Position" class="border p-2 rounded">
+            <input type="text" name="phone" id="form-phone" placeholder="Contact" class="border p-2 rounded">
 
-            <!-- 🔥 LOGIN ACCOUNT -->
-            <input type="text" id="form-username" placeholder="Username" class="border p-2 rounded" required>
-            <input type="password" id="form-password" placeholder="Password" class="border p-2 rounded" required>
+            <input type="text" name="username" id="form-username" placeholder="Username" class="border p-2 rounded" required>
+            <input type="password" name="password" id="form-password" placeholder="Password" class="border p-2 rounded" required>
 
             <button class="col-span-2 bg-blue-600 text-white p-3 rounded font-bold">
-                Create Account
+                Create / Update
             </button>
 
         </form>
     </div>
 </section>
 
-<!-- VIEW -->
+<!-- VIEW EMPLOYEES -->
 <section id="view-info" class="page-section">
     <h2 class="text-xl font-bold mb-4">Employees</h2>
 
-    <table class="w-full bg-white shadow rounded">
+    <table class="w-full bg-white shadow rounded overflow-hidden">
         <thead class="bg-gray-800 text-white">
-            <tr>
-                <th class="p-3">Name</th>
-                <th class="p-3">Dept</th>
-                <th class="p-3">Position</th>
+            <tr class="text-center">
+                <th class="p-3 border-r-2 border-gray-600">Name</th>
+                <th class="p-3 border-r-2 border-gray-600">Dept</th>
+                <th class="p-3 border-r-2 border-gray-600">Position</th>
                 <th class="p-3">Contact</th>
+                <th class="p-3">Actions</th>
             </tr>
         </thead>
 
-        <tbody id="tableBody"></tbody>
+        <tbody id="tableBody" class="text-center"></tbody>
     </table>
 </section>
 
@@ -96,7 +102,12 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f6f9; }
 
 <script>
 
-// NAVIGATION
+function logout() {
+    if (confirm("Are you sure you want to log out?")) {
+        window.location.href = "/logout";
+    }
+}
+
 function showPage(id, el) {
     document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
@@ -105,69 +116,93 @@ function showPage(id, el) {
     el.classList.add('active');
 }
 
-// DATA (FRONTEND DISPLAY ONLY)
-let employees = [];
+////////////////////////////////////////////////////
+// SUCCESS
+////////////////////////////////////////////////////
+function showSuccess(msg) { alert(msg); }
+function showError(msg) { alert("Error: " + msg); }
 
-// FORM SUBMIT → SEND TO FLASK
-document.getElementById("employeeForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
+////////////////////////////////////////////////////
+// LOAD EMPLOYEES
+////////////////////////////////////////////////////
+async function loadEmployees() {
+    const res = await fetch("/get_employees");
+    const data = await res.json();
 
-    const emp = {
-        name: document.getElementById("form-name").value,
-        dept: document.getElementById("form-dept").value,
-        pos: document.getElementById("form-pos").value,
-        phone: document.getElementById("form-phone").value,
-    };
-
-    const username = document.getElementById("form-username").value;
-    const password = document.getElementById("form-password").value;
-
-    // SEND TO BACKEND
-    const formData = new URLSearchParams();
-    formData.append("username", username);
-    formData.append("password", password);
-
-    try {
-        const res = await fetch("/create_employee", {
-            method: "POST",
-            body: formData
-        });
-
-        if (res.ok) {
-            alert("Employee account created!");
-
-            // ADD TO TABLE (frontend)
-            employees.push(emp);
-            renderTable();
-
-            document.getElementById("employeeForm").reset();
-        } else {
-            alert("User already exists!");
-        }
-
-    } catch {
-        alert("Server error!");
-    }
-});
-
-// RENDER TABLE
-function renderTable() {
     const tbody = document.getElementById("tableBody");
     tbody.innerHTML = "";
 
-    employees.forEach(e => {
+    data.forEach(emp => {
         tbody.innerHTML += `
-            <tr>
-                <td class="p-3">${e.name}</td>
-                <td class="p-3">${e.dept}</td>
-                <td class="p-3">${e.pos}</td>
-                <td class="p-3">${e.phone}</td>
+            <tr class="border-b">
+                <td class="p-3 border-r-2">${emp[1]}</td>
+                <td class="p-3 border-r-2">${emp[2]}</td>
+                <td class="p-3 border-r-2">${emp[3]}</td>
+                <td class="p-3">${emp[4]}</td>
+
+                <td class="p-3 space-x-2">
+                    <button onclick="editEmployee('${emp[0]}','${emp[1]}','${emp[2]}','${emp[3]}','${emp[4]}')" 
+                        class="bg-yellow-500 text-white px-2 py-1 rounded">Edit</button>
+
+                    <button onclick="deleteEmployee('${emp[0]}')" 
+                        class="bg-red-500 text-white px-2 py-1 rounded">Delete</button>
+                </td>
             </tr>
         `;
     });
 
-    document.getElementById("count").innerText = employees.length;
+    document.getElementById("count").innerText = data.length;
 }
+
+////////////////////////////////////////////////////
+// EDIT
+////////////////////////////////////////////////////
+function editEmployee(username, name, dept, position, phone) {
+    document.getElementById("form-name").value = name;
+    document.getElementById("form-dept").value = dept;
+    document.getElementById("form-pos").value = position;
+    document.getElementById("form-phone").value = phone;
+    document.getElementById("form-username").value = username;
+
+    showPage('add-employee', document.querySelectorAll('.nav-link')[1]);
+}
+
+////////////////////////////////////////////////////
+// DELETE
+////////////////////////////////////////////////////
+async function deleteEmployee(username) {
+    if (!confirm("Delete this employee?")) return;
+
+    try {
+        const res = await fetch("/delete_employee", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ username })
+        });
+
+        if (res.ok) {
+            showSuccess("Employee deleted successfully ✅");
+            loadEmployees();
+        } else {
+            showError("Delete failed");
+        }
+
+    } catch (err) {
+        showError("Server error");
+    }
+}
+
+////////////////////////////////////////////////////
+// FORM SUCCESS
+////////////////////////////////////////////////////
+document.getElementById("employeeForm").addEventListener("submit", function() {
+    showSuccess("Employee saved successfully ✅");
+});
+
+////////////////////////////////////////////////////
+// INIT
+////////////////////////////////////////////////////
+window.onload = loadEmployees;
 
 </script>
 

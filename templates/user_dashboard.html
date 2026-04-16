@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Employee Dashboard</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f3f6f9;
+}
+.sidebar {
+    background-color: #1a233a;
+}
+.card {
+    transition: 0.3s;
+}
+.card:hover {
+    transform: translateY(-5px);
+}
+.section {
+    opacity: 0;
+    transform: translateY(10px);
+    max-height: 0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+.section.active {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 1000px;
+}
+.nav-active {
+    background-color: #2563eb !important;
+}
+</style>
+</head>
+
+<body class="flex h-screen">
+
+<!-- SIDEBAR -->
+<aside class="sidebar w-64 text-white p-4 flex flex-col">
+    <h1 class="text-2xl font-bold mb-6">EILMS</h1>
+
+    <nav class="space-y-3">
+        <a href="#" onclick="showSection('dashboard', this)" class="nav-btn block p-3 rounded hover:bg-gray-700">
+            <i class="fas fa-home"></i> Dashboard
+        </a>
+
+        <a href="#" onclick="showSection('profile', this)" class="nav-btn block p-3 rounded hover:bg-gray-700">
+            <i class="fas fa-user"></i> My Profile
+        </a>
+
+        <!-- ✅ FIXED LOGOUT -->
+        <a href="/logout" class="block p-3 rounded hover:bg-red-600">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+    </nav>
+</aside>
+
+<!-- MAIN -->
+<main class="flex-1 p-6 overflow-y-auto">
+
+<h1 class="text-3xl font-bold mb-6">Welcome, Employee 👋</h1>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="section active mt-8 bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-bold mb-4">Dashboard Overview</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-blue-500 text-white p-5 rounded">
+            <h3 class="text-lg font-bold">Profile</h3>
+            <p>View your personal info</p>
+        </div>
+
+        <div class="bg-green-500 text-white p-5 rounded">
+            <h3 class="text-lg font-bold">Leave</h3>
+            <p>No leave requests</p>
+        </div>
+
+        <div class="bg-yellow-500 text-white p-5 rounded">
+            <h3 class="text-lg font-bold">Notifications</h3>
+            <p>No updates</p>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ FIXED PROFILE (NO FORM, VIEW ONLY) -->
+<div id="profile" class="section mt-8 bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-bold mb-4">My Information</h2>
+
+    <p class="text-red-500 mb-4">
+        Note: Only Admin can edit your information.
+    </p>
+
+    <!-- ✅ CONNECTED TO FLASK -->
+    <table class="w-full text-left border">
+        <tr><th class="p-2">Username:</th><td>{{ user[0] }}</td></tr>
+        <tr><th class="p-2">Full Name:</th><td>{{ user[1] }}</td></tr>
+        <tr><th class="p-2">Department:</th><td>{{ user[2] }}</td></tr>
+        <tr><th class="p-2">Position:</th><td>{{ user[3] }}</td></tr>
+        <tr><th class="p-2">Phone:</th><td>{{ user[4] }}</td></tr>
+    </table>
+</div>
+
+<!-- LEAVE -->
+<div id="leave" class="section mt-8 bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-bold mb-4">Leave Status</h2>
+</div>
+
+<!-- NOTIF -->
+<div id="notif" class="section mt-8 bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-bold mb-4">Notifications</h2>
+</div>
+
+</main>
+
+<script>
+
+// KEEP ONLY THIS
+function showSection(sectionId, element = null) {
+    const sections = ["dashboard","profile","leave","notif"];
+
+    sections.forEach(id => {
+        document.getElementById(id).classList.remove("active");
+    });
+
+    document.getElementById(sectionId).classList.add("active");
+
+    document.querySelectorAll(".nav-btn").forEach(btn => {
+        btn.classList.remove("nav-active");
+    });
+
+    if (element) element.classList.add("nav-active");
+}
+
+window.onload = function(){
+    showSection('dashboard');
+};
+
+</script>
+
+</body>
+</html>
