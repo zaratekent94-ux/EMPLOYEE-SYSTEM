@@ -7,7 +7,7 @@
 ## The Employee Information And Leave Management System
 
 # Description
-## An employee and leave management system is designed to serve as a centralized platform for managing employee related data and leave process within an organization. Its purpose is to securely store and organize employee information while efficiently handling leave records, requests, approvals, and balances. By integrating employee information with leave management, the system ensures accuracy, consistency, and accessibility of data, supporting smooth human resource operations and effective workforce management.
+An employee and leave management system is designed to serve as a centralized platform for managing employee related data and leave process within an organization. Its purpose is to securely store and organize employee information while efficiently handling leave records, requests, approvals, and balances. By integrating employee information with leave management, the system ensures accuracy, consistency, and accessibility of data, supporting smooth human resource operations and effective workforce management.
 
 Prerequisites:
 Before installing the Employee Information and Leave Management System, make sure you have the following tools and software installed:
