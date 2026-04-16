@@ -9,7 +9,7 @@
 # Description
 An employee and leave management system is designed to serve as a centralized platform for managing employee related data and leave process within an organization. Its purpose is to securely store and organize employee information while efficiently handling leave records, requests, approvals, and balances. By integrating employee information with leave management, the system ensures accuracy, consistency, and accessibility of data, supporting smooth human resource operations and effective workforce management.
 
-Prerequisites:
+# Prerequisites:
 Before installing the Employee Information and Leave Management System, make sure you have the following tools and software installed:
 -Python 3.x – to run the backend
 -Flask – web framework for building the system
@@ -18,7 +18,7 @@ Before installing the Employee Information and Leave Management System, make sur
 -Code editor (like VS Code or PyCharm) – to view and edit the project files
 -Web browser – to access and test the system
 
-Installation:
+# Installation:
 
 1.install flask - pip instal flask
 
