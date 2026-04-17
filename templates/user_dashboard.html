@@ -16,23 +16,11 @@ body {
 .sidebar {
     background-color: #1a233a;
 }
-.card {
-    transition: 0.3s;
-}
-.card:hover {
-    transform: translateY(-5px);
-}
 .section {
-    opacity: 0;
-    transform: translateY(10px);
-    max-height: 0;
-    overflow: hidden;
-    transition: all 0.3s ease;
+    display: none;
 }
 .section.active {
-    opacity: 1;
-    transform: translateY(0);
-    max-height: 1000px;
+    display: block;
 }
 .nav-active {
     background-color: #2563eb !important;
@@ -55,7 +43,14 @@ body {
             <i class="fas fa-user"></i> My Profile
         </a>
 
-        <!-- ✅ FIXED LOGOUT -->
+        <a href="#" onclick="showSection('leave', this)" class="nav-btn block p-3 rounded hover:bg-gray-700">
+            <i class="fas fa-file-signature"></i> Leave
+        </a>
+
+        <a href="#" onclick="showSection('notif', this)" class="nav-btn block p-3 rounded hover:bg-gray-700">
+            <i class="fas fa-bell"></i> Notifications
+        </a>
+
         <a href="/logout" class="block p-3 rounded hover:bg-red-600">
             <i class="fas fa-sign-out-alt"></i> Logout
         </a>
@@ -65,63 +60,115 @@ body {
 <!-- MAIN -->
 <main class="flex-1 p-6 overflow-y-auto">
 
-<h1 class="text-3xl font-bold mb-6">Welcome, Employee 👋</h1>
+<h1 class="text-3xl font-bold mb-6">Welcome 👋</h1>
 
 <!-- DASHBOARD -->
-<div id="dashboard" class="section active mt-8 bg-white p-6 rounded shadow">
-    <h2 class="text-xl font-bold mb-4">Dashboard Overview</h2>
+<div id="dashboard" class="section active">
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-blue-500 text-white p-5 rounded">
-            <h3 class="text-lg font-bold">Profile</h3>
-            <p>View your personal info</p>
+    <h2 class="text-xl font-bold mb-6">Dashboard Overview</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+
+        <div class="bg-gradient-to-r from-blue-500 to-blue-700 text-white p-6 rounded-xl shadow-lg">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold">My Profile</h3>
+                    <p class="text-sm">View your details</p>
+                </div>
+                <i class="fas fa-user text-3xl"></i>
+            </div>
         </div>
 
-        <div class="bg-green-500 text-white p-5 rounded">
-            <h3 class="text-lg font-bold">Leave</h3>
-            <p>No leave requests</p>
+        <div class="bg-gradient-to-r from-green-500 to-green-700 text-white p-6 rounded-xl shadow-lg">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold">Leave Requests</h3>
+                    <p class="text-sm">Submit and track leave</p>
+                </div>
+                <i class="fas fa-file-signature text-3xl"></i>
+            </div>
         </div>
 
-        <div class="bg-yellow-500 text-white p-5 rounded">
-            <h3 class="text-lg font-bold">Notifications</h3>
-            <p>No updates</p>
+        <div class="bg-gradient-to-r from-yellow-500 to-orange-500 text-white p-6 rounded-xl shadow-lg">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold">Notifications</h3>
+                    <p class="text-sm">Check updates</p>
+                </div>
+                <i class="fas fa-bell text-3xl"></i>
+            </div>
         </div>
+
+    </div>
+
+    <div class="bg-white p-6 rounded-xl shadow">
+        <h2 class="font-bold mb-4">Quick Info</h2>
+        <p>👤 {{ user[1] }}</p>
+        <p>🏢 {{ user[2] }}</p>
+        <p>💼 {{ user[3] }}</p>
+    </div>
+
+</div>
+
+<!-- PROFILE -->
+<div id="profile" class="section">
+    <div class="bg-white p-6 rounded-xl shadow max-w-2xl">
+        <h2 class="text-xl font-bold mb-4">My Profile</h2>
+
+        <table class="w-full border">
+            <tr><th class="p-3">Username</th><td>{{ user[0] }}</td></tr>
+            <tr><th class="p-3">Full Name</th><td>{{ user[1] }}</td></tr>
+            <tr><th class="p-3">Department</th><td>{{ user[2] }}</td></tr>
+            <tr><th class="p-3">Position</th><td>{{ user[3] }}</td></tr>
+            <tr><th class="p-3">Phone</th><td>{{ user[4] }}</td></tr>
+        </table>
     </div>
 </div>
 
-<!-- ✅ FIXED PROFILE (NO FORM, VIEW ONLY) -->
-<div id="profile" class="section mt-8 bg-white p-6 rounded shadow">
-    <h2 class="text-xl font-bold mb-4">My Information</h2>
-
-    <p class="text-red-500 mb-4">
-        Note: Only Admin can edit your information.
-    </p>
-
-    <!-- ✅ CONNECTED TO FLASK -->
-    <table class="w-full text-left border">
-        <tr><th class="p-2">Username:</th><td>{{ user[0] }}</td></tr>
-        <tr><th class="p-2">Full Name:</th><td>{{ user[1] }}</td></tr>
-        <tr><th class="p-2">Department:</th><td>{{ user[2] }}</td></tr>
-        <tr><th class="p-2">Position:</th><td>{{ user[3] }}</td></tr>
-        <tr><th class="p-2">Phone:</th><td>{{ user[4] }}</td></tr>
-    </table>
-</div>
-
 <!-- LEAVE -->
-<div id="leave" class="section mt-8 bg-white p-6 rounded shadow">
-    <h2 class="text-xl font-bold mb-4">Leave Status</h2>
+<div id="leave" class="section">
+
+    <div class="bg-white p-6 rounded-xl shadow mb-6">
+        <h2 class="text-xl font-bold mb-4">Submit Leave Request</h2>
+
+        <form method="POST" action="/submit_leave">
+            <textarea name="reason" placeholder="Enter reason..."
+                class="w-full border p-3 rounded mb-4" required></textarea>
+
+            <button class="bg-blue-600 text-white px-4 py-2 rounded">
+                Submit Leave
+            </button>
+        </form>
+    </div>
+
+    <div class="bg-white p-6 rounded-xl shadow">
+        <h2 class="text-xl font-bold mb-4">My Leave Requests</h2>
+
+        <table class="w-full text-left">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="p-2">Reason</th>
+                    <th class="p-2">Status</th>
+                </tr>
+            </thead>
+            <tbody id="leaveTable"></tbody>
+        </table>
+    </div>
+
 </div>
 
-<!-- NOTIF -->
-<div id="notif" class="section mt-8 bg-white p-6 rounded shadow">
-    <h2 class="text-xl font-bold mb-4">Notifications</h2>
+<!-- NOTIFICATIONS -->
+<div id="notif" class="section">
+    <div class="bg-white p-6 rounded-xl shadow">
+        <h2 class="text-xl font-bold mb-4">Notifications</h2>
+        <p>No notifications available.</p>
+    </div>
 </div>
 
 </main>
 
 <script>
 
-// KEEP ONLY THIS
 function showSection(sectionId, element = null) {
     const sections = ["dashboard","profile","leave","notif"];
 
@@ -133,16 +180,40 @@ function showSection(sectionId, element = null) {
 
     document.querySelectorAll(".nav-btn").forEach(btn => {
         btn.classList.remove("nav-active");
-    });
+    });A
 
     if (element) element.classList.add("nav-active");
 }
 
+////////////////////////////////////////////////////
+// LOAD LEAVE
+////////////////////////////////////////////////////
+async function loadMyLeave() {
+    const res = await fetch("/get_my_leave");
+    const data = await res.json();
+
+    const table = document.getElementById("leaveTable");
+    table.innerHTML = "";
+
+    data.forEach(item => {
+        table.innerHTML += `
+        <tr class="border-b">
+            <td class="p-2">${item[0]}</td>
+            <td class="p-2 font-bold ${
+                item[1] === 'Pending' ? 'text-yellow-500' :
+                item[1] === 'Approved' ? 'text-green-500' :
+                'text-red-500'
+            }">${item[1]}</td>
+        </tr>`;
+    });
+}
+
 window.onload = function(){
     showSection('dashboard');
+    loadMyLeave();
 };
 
 </script>
 
 </body>
-</html>
+</html>s

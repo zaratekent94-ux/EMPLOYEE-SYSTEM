@@ -4,276 +4,338 @@ import sqlite3
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-# -----------------------------------
-# DATABASE SETUP
-# -----------------------------------
-def init_db():
-    conn = sqlite3.connect("employees.db")
-    c = conn.cursor()
+# =========================
+# DATABASE CLASS
+# =========================
+class Database:
+    def __init__(self):
+        self.db = "employees.db"
+        self.init_db()
 
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE,
-        password TEXT,
-        role TEXT,
-        name TEXT,
-        dept TEXT,
-        position TEXT,
-        phone TEXT
-    )
-    """)
+    def connect(self):
+        return sqlite3.connect(self.db)
 
-    conn.commit()
-    conn.close()
+    def init_db(self):
+        conn = self.connect()
+        c = conn.cursor()
 
-init_db()
-
-# -----------------------------------
-# DEFAULT ADMIN
-# -----------------------------------
-def create_default_admin():
-    conn = sqlite3.connect("employees.db")
-    c = conn.cursor()
-
-    c.execute("SELECT * FROM users WHERE username=?", ("admin",))
-    admin_exists = c.fetchone()
-
-    if not admin_exists:
+        # USERS
         c.execute("""
-        INSERT INTO users (username, password, role)
-        VALUES (?, ?, ?)
-        """, ("admin", "password123", "admin"))
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE,
+            password TEXT,
+            role TEXT,
+            name TEXT,
+            dept TEXT,
+            position TEXT,
+            phone TEXT
+        )
+        """)
+
+        # ✅ LEAVE TABLE (ADDED)
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS leave_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT,
+            reason TEXT,
+            status TEXT DEFAULT 'Pending'
+        )
+        """)
 
         conn.commit()
+        conn.close()
 
-    conn.close()
+    def execute(self, query, params=(), fetch=False):
+        conn = self.connect()
+        c = conn.cursor()
+
+        c.execute(query, params)
+
+        data = None
+        if fetch:
+            data = c.fetchall()
+
+        conn.commit()
+        conn.close()
+
+        return data
+
+
+db = Database()
+
+# =========================
+# USER BASE CLASS
+# =========================
+class User:
+    def __init__(self, username):
+        self.username = username
+
+    @staticmethod
+    def login(username, password):
+        result = db.execute(
+            "SELECT username, role FROM users WHERE username=? AND password=?",
+            (username, password),
+            fetch=True
+        )
+
+        if result:
+            user = result[0]
+            session["username"] = user[0]
+            session["role"] = user[1]
+            return user[1]
+
+        return None
+
+
+# =========================
+# ADMIN CLASS
+# =========================
+class Admin(User):
+
+    def create_employee(self, data):
+        try:
+            db.execute("""
+            INSERT INTO users (username, password, role, name, dept, position, phone)
+            VALUES (?, ?, 'user', ?, ?, ?, ?)
+            """, (
+                data["username"],
+                data["password"],
+                data["name"],
+                data["dept"],
+                data["position"],
+                data["phone"]
+            ))
+            return True
+        except:
+            return False
+
+    def update_employee(self, data):
+        db.execute("""
+        UPDATE users
+        SET name=?, dept=?, position=?, phone=?
+        WHERE username=?
+        """, (
+            data["name"],
+            data["dept"],
+            data["position"],
+            data["phone"],
+            data["username"]
+        ))
+
+    def delete_employee(self, username):
+        db.execute("DELETE FROM users WHERE username=?", (username,))
+
+    def get_employees(self):
+        return db.execute("""
+        SELECT username, name, dept, position, phone
+        FROM users WHERE role='user'
+        """, fetch=True)
+
+    # ✅ LEAVE MANAGEMENT
+    def get_all_leaves(self):
+        return db.execute("""
+        SELECT id, username, reason, status
+        FROM leave_requests
+        """, fetch=True)
+
+    def update_leave_status(self, leave_id, status):
+        db.execute("""
+        UPDATE leave_requests
+        SET status=?
+        WHERE id=?
+        """, (status, leave_id))
+
+
+# =========================
+# EMPLOYEE CLASS
+# =========================
+class Employee(User):
+
+    def get_profile(self):
+        return db.execute("""
+        SELECT username, name, dept, position, phone
+        FROM users WHERE username=?
+        """, (self.username,), fetch=True)
+
+    # ✅ SUBMIT LEAVE
+    def submit_leave(self, reason):
+        db.execute("""
+        INSERT INTO leave_requests (username, reason)
+        VALUES (?, ?)
+        """, (self.username, reason))
+
+    # ✅ GET MY LEAVE
+    def get_my_leave(self):
+        return db.execute("""
+        SELECT reason, status
+        FROM leave_requests
+        WHERE username=?
+        """, (self.username,), fetch=True)
+
+
+# =========================
+# DEFAULT ADMIN
+# =========================
+def create_default_admin():
+    result = db.execute("SELECT * FROM users WHERE username=?", ("admin",), fetch=True)
+
+    if not result:
+        db.execute("""
+        INSERT INTO users (username, password, role)
+        VALUES ('admin', 'password123', 'admin')
+        """)
 
 create_default_admin()
 
-# -----------------------------------
-# BASE CLASS
-# -----------------------------------
-class User:
-    def __init__(self, username, password, role):
-        self.__username = username
-        self.__password = password
-        self.__role = role
-
-    def get_username(self):
-        return self.__username
-
-    def get_password(self):
-        return self.__password
-
-    def get_role(self):
-        return self.__role
-
-# -----------------------------------
-# EMPLOYEE CLASS
-# -----------------------------------
-class Employee(User):
-    def __init__(self, username, password):
-        super().__init__(username, password, "user")
-
-    def dashboard(self):
-        return "user_dashboard"
-
-# -----------------------------------
-# ADMIN CLASS
-# -----------------------------------
-class Admin(User):
-    def __init__(self, username, password):
-        super().__init__(username, password, "admin")
-
-    def dashboard(self):
-        return "admin_dashboard"
-
-    def create_employee(self, username, password, name, dept, position, phone):
-        conn = sqlite3.connect("employees.db")
-        c = conn.cursor()
-
-        try:
-            c.execute("""
-            INSERT INTO users (username, password, role, name, dept, position, phone)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (username, password, "user", name, dept, position, phone))
-
-            conn.commit()
-            conn.close()
-            return "Employee account created successfully"
-
-        except sqlite3.IntegrityError:
-            conn.close()
-            return "Username already exists"
-
-        except Exception as e:
-            conn.close()
-            print("DATABASE ERROR:", e)
-            return "Database error"
-
-# -----------------------------------
-# LOGIN FUNCTION
-# -----------------------------------
-def get_user(username, password):
-    conn = sqlite3.connect("employees.db")
-    c = conn.cursor()
-
-    c.execute("""
-        SELECT username, password, role 
-        FROM users 
-        WHERE username=? AND password=?
-    """, (username, password))
-
-    data = c.fetchone()
-    conn.close()
-
-    if data:
-        session["username"] = data[0]
-        session["role"] = data[2]
-
-        if data[2] == "admin":
-            return Admin(data[0], data[1])
-        else:
-            return Employee(data[0], data[1])
-
-    return None
-
-# -----------------------------------
+# =========================
 # ROUTES
-# -----------------------------------
-@app.route("/", methods=["GET"])
+# =========================
+
+@app.route("/")
 def index():
     return render_template("login.html")
+
 
 @app.route("/login", methods=["POST"])
 def login():
     username = request.form.get("username")
     password = request.form.get("password")
 
-    user = get_user(username, password)
+    role = User.login(username, password)
 
-    if user:
-        return redirect(url_for(user.dashboard()))
-    else:
-        return render_template("login.html", message="Invalid login")
+    if role == "admin":
+        return redirect(url_for("admin_dashboard"))
+    elif role == "user":
+        return redirect(url_for("user_dashboard"))
 
-# -----------------------------------
-# LOGOUT
-# -----------------------------------
+    return render_template("login.html", message="Invalid login")
+
+
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("index"))
 
-# -----------------------------------
-# CREATE EMPLOYEE
-# -----------------------------------
-@app.route("/create_employee", methods=["POST"])
-def create_employee_route():
+
+# =========================
+# ADMIN ROUTES
+# =========================
+
+@app.route("/admin_dashboard")
+def admin_dashboard():
     if session.get("role") != "admin":
         return redirect(url_for("index"))
+    return render_template("admin_dashboard.html")
 
-    username = request.form.get("username")
-    password = request.form.get("password")
-    name = request.form.get("name")
-    dept = request.form.get("dept")
-    position = request.form.get("position")
-    phone = request.form.get("phone")
 
-    conn = sqlite3.connect("employees.db")
-    c = conn.cursor()
-
-    try:
-        c.execute("""
-        INSERT INTO users (username, password, role, name, dept, position, phone)
-        VALUES (?, ?, 'user', ?, ?, ?, ?)
-        """, (username, password, name, dept, position, phone))
-
-        conn.commit()
-
-    except Exception as e:
-        print("CREATE ERROR:", e)
-
-    conn.close()
-
+@app.route("/create_employee", methods=["POST"])
+def create_employee():
+    admin = Admin(session["username"])
+    admin.create_employee(request.form)
     return redirect(url_for("admin_dashboard"))
 
-# -----------------------------------
-# GET EMPLOYEES (FIXED)
-# -----------------------------------
+
+@app.route("/update_employee", methods=["POST"])
+def update_employee():
+    admin = Admin(session["username"])
+    admin.update_employee(request.form)
+    return redirect(url_for("admin_dashboard"))
+
+
 @app.route("/get_employees")
 def get_employees():
-    conn = sqlite3.connect("employees.db")
-    c = conn.cursor()
-
-    c.execute("""
-        SELECT username, name, dept, position, phone 
-        FROM users 
-        WHERE role='user'
-    """)
-
-    data = c.fetchall()
-    conn.close()
-
+    admin = Admin(session["username"])
+    data = admin.get_employees()
     return jsonify(data)
 
-# -----------------------------------
-# DELETE EMPLOYEE (ADDED)
-# -----------------------------------
+
 @app.route("/delete_employee", methods=["POST"])
 def delete_employee():
-    if session.get("role") != "admin":
-        return "Unauthorized", 403
+    admin = Admin(session["username"])
 
     data = request.get_json()
     username = data.get("username")
 
-    conn = sqlite3.connect("employees.db")
-    c = conn.cursor()
+    if not username:
+        return jsonify({"message": "Invalid username"}), 400
 
-    try:
-        c.execute("DELETE FROM users WHERE username=?", (username,))
-        conn.commit()
+    admin.delete_employee(username)
 
-    except Exception as e:
-        print("DELETE ERROR:", e)
-        return "Server error", 500
+    return jsonify({"message": "Deleted successfully"})
 
-    conn.close()
 
-    return "Deleted", 200
-
-# -----------------------------------
-# DASHBOARDS
-# -----------------------------------
-@app.route("/admin_dashboard")
-def admin_dashboard():
-    if "username" not in session or session.get("role") != "admin":
-        return redirect(url_for("index"))
-    return render_template("admin_dashboard.html")
+# =========================
+# USER DASHBOARD
+# =========================
 
 @app.route("/user_dashboard")
 def user_dashboard():
     if "username" not in session:
         return redirect(url_for("index"))
 
-    conn = sqlite3.connect("employees.db")
-    c = conn.cursor()
+    emp = Employee(session["username"])
+    user = emp.get_profile()[0]
 
-    c.execute("""
-        SELECT username, name, dept, position, phone
-        FROM users
-        WHERE username=?
-    """, (session["username"],))
+    return render_template("user_dashboard.html", user=user)
 
-    data = c.fetchone()
-    conn.close()
 
-    return render_template("user_dashboard.html", user=data)
+# =========================
+# LEAVE ROUTES
+# =========================
 
-# -----------------------------------
+@app.route("/submit_leave", methods=["POST"])
+def submit_leave():
+    if "username" not in session:
+        return redirect(url_for("index"))
+
+    emp = Employee(session["username"])
+    reason = request.form.get("reason")
+
+    emp.submit_leave(reason)
+
+    return redirect(url_for("user_dashboard"))
+
+
+@app.route("/get_my_leave")
+def get_my_leave():
+    if "username" not in session:
+        return jsonify([])
+
+    emp = Employee(session["username"])
+    data = emp.get_my_leave()
+
+    return jsonify(data)
+
+
+@app.route("/get_all_leaves")
+def get_all_leaves():
+    if session.get("role") != "admin":
+        return jsonify([])
+
+    admin = Admin(session["username"])
+    data = admin.get_all_leaves()
+
+    return jsonify(data)
+
+
+@app.route("/update_leave_status", methods=["POST"])
+def update_leave_status():
+    if session.get("role") != "admin":
+        return jsonify({"message": "Unauthorized"}), 403
+
+    data = request.get_json()
+    leave_id = data.get("id")
+    status = data.get("status")
+
+    admin = Admin(session["username"])
+    admin.update_leave_status(leave_id, status)
+
+    return jsonify({"message": f"{status} successfully"})
+
+
+# =========================
 # RUN
-# -----------------------------------
+# =========================
 if __name__ == "__main__":
     app.run(debug=True)
