@@ -110,30 +110,93 @@ body {
 
 </div>
 
-<!-- PROFILE -->
+<!-- ✅ PROFILE (ENHANCED ONLY) -->
 <div id="profile" class="section">
-    <div class="bg-white p-6 rounded-xl shadow max-w-2xl">
-        <h2 class="text-xl font-bold mb-4">My Profile</h2>
+    <div class="bg-white p-8 rounded-xl shadow max-w-4xl mx-auto">
 
-        <table class="w-full border">
-            <tr><th class="p-3">Username</th><td>{{ user[0] }}</td></tr>
-            <tr><th class="p-3">Full Name</th><td>{{ user[1] }}</td></tr>
-            <tr><th class="p-3">Department</th><td>{{ user[2] }}</td></tr>
-            <tr><th class="p-3">Position</th><td>{{ user[3] }}</td></tr>
-            <tr><th class="p-3">Phone</th><td>{{ user[4] }}</td></tr>
-        </table>
+        <!-- HEADER -->
+        <div class="flex items-center gap-6 mb-8">
+
+            <div class="w-24 h-24 rounded-full bg-blue-600 flex items-center justify-center text-white text-4xl font-bold shadow-lg">
+                {{ user[1][0] }}
+            </div>
+
+            <div>
+                <h2 class="text-3xl font-bold">{{ user[1] }}</h2>
+                <p class="text-gray-500 text-lg">{{ user[3] }}</p>
+                <p class="text-sm text-gray-400">{{ user[2] }}</p>
+            </div>
+
+            <div class="ml-auto">
+                <button class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 shadow">
+                    <i class="fas fa-edit mr-2"></i>Edit Profile
+                </button>
+            </div>
+        </div>
+
+        <!-- INFO -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <div class="bg-gray-50 p-5 rounded-lg">
+                <p class="text-sm text-gray-500">Username</p>
+                <p class="text-lg font-semibold">{{ user[0] }}</p>
+            </div>
+
+            <div class="bg-gray-50 p-5 rounded-lg">
+                <p class="text-sm text-gray-500">Full Name</p>
+                <p class="text-lg font-semibold">{{ user[1] }}</p>
+            </div>
+
+            <div class="bg-gray-50 p-5 rounded-lg">
+                <p class="text-sm text-gray-500">Department</p>
+                <p class="text-lg font-semibold">{{ user[2] }}</p>
+            </div>
+
+            <div class="bg-gray-50 p-5 rounded-lg">
+                <p class="text-sm text-gray-500">Position</p>
+                <p class="text-lg font-semibold">{{ user[3] }}</p>
+            </div>
+
+            <div class="bg-gray-50 p-5 rounded-lg md:col-span-2">
+                <p class="text-sm text-gray-500">Phone</p>
+                <p class="text-lg font-semibold">{{ user[4] }}</p>
+            </div>
+
+        </div>
+
+        <!-- EXTRA -->
+        <div class="mt-8 border-t pt-6">
+            <h3 class="font-bold text-lg mb-2">Account Info</h3>
+            <div class="flex justify-between text-gray-600">
+                <p>Status: <span class="text-green-600 font-semibold">Active</span></p>
+                <p>Role: Employee</p>
+            </div>
+        </div>
+
     </div>
 </div>
 
-<!-- LEAVE -->
+<!-- LEAVE (UNCHANGED) -->
 <div id="leave" class="section">
-
     <div class="bg-white p-6 rounded-xl shadow mb-6">
         <h2 class="text-xl font-bold mb-4">Submit Leave Request</h2>
 
-        <form method="POST" action="/submit_leave">
+        <form method="POST" action="/submit_leave" class="space-y-4">
+
+            <select name="type" class="w-full border p-3 rounded" required>
+                <option value="">Select Leave Type</option>
+                <option value="Sick">Sick Leave</option>
+                <option value="Vacation">Vacation Leave</option>
+                <option value="Emergency">Emergency Leave</option>
+            </select>
+
+            <div class="grid grid-cols-2 gap-4">
+                <input type="date" name="start_date" class="border p-3 rounded" required>
+                <input type="date" name="end_date" class="border p-3 rounded" required>
+            </div>
+
             <textarea name="reason" placeholder="Enter reason..."
-                class="w-full border p-3 rounded mb-4" required></textarea>
+                class="w-full border p-3 rounded" required></textarea>
 
             <button class="bg-blue-600 text-white px-4 py-2 rounded">
                 Submit Leave
@@ -144,17 +207,20 @@ body {
     <div class="bg-white p-6 rounded-xl shadow">
         <h2 class="text-xl font-bold mb-4">My Leave Requests</h2>
 
-        <table class="w-full text-left">
-            <thead class="bg-gray-200">
-                <tr>
-                    <th class="p-2">Reason</th>
-                    <th class="p-2">Status</th>
+        <table class="w-full border-separate border-spacing-y-2">
+            <thead>
+                <tr class="bg-gray-800 text-white text-center">
+                    <th class="p-3">Type</th>
+                    <th class="p-3">Dates</th>
+                    <th class="p-3">Reason</th>
+                    <th class="p-3">Status</th>
+                    <th class="p-3">Comment</th>
+                    <th class="p-3">Action</th>
                 </tr>
             </thead>
             <tbody id="leaveTable"></tbody>
         </table>
     </div>
-
 </div>
 
 <!-- NOTIFICATIONS -->
@@ -180,14 +246,11 @@ function showSection(sectionId, element = null) {
 
     document.querySelectorAll(".nav-btn").forEach(btn => {
         btn.classList.remove("nav-active");
-    });A
+    });
 
     if (element) element.classList.add("nav-active");
 }
 
-////////////////////////////////////////////////////
-// LOAD LEAVE
-////////////////////////////////////////////////////
 async function loadMyLeave() {
     const res = await fetch("/get_my_leave");
     const data = await res.json();
@@ -197,13 +260,17 @@ async function loadMyLeave() {
 
     data.forEach(item => {
         table.innerHTML += `
-        <tr class="border-b">
-            <td class="p-2">${item[0]}</td>
+        <tr class="bg-gray-100 text-center">
+            <td class="p-2">${item.type}</td>
+            <td class="p-2">${item.start_date} - ${item.end_date}</td>
+            <td class="p-2">${item.reason}</td>
             <td class="p-2 font-bold ${
-                item[1] === 'Pending' ? 'text-yellow-500' :
-                item[1] === 'Approved' ? 'text-green-500' :
+                item.status === 'Pending' ? 'text-yellow-500' :
+                item.status === 'Approved' ? 'text-green-500' :
                 'text-red-500'
-            }">${item[1]}</td>
+            }">${item.status}</td>
+            <td class="p-2">${item.comment || '-'}</td>
+            <td class="p-2">-</td>
         </tr>`;
     });
 }
@@ -216,4 +283,4 @@ window.onload = function(){
 </script>
 
 </body>
-</html>s
+</html>

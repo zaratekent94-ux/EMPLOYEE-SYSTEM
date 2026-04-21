@@ -15,6 +15,9 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f6f9; }
 .nav-link.active { background-color: #4382f6; }
 .page-section { display: none; }
 .page-section.active { display: block; }
+
+/* ✅ Optional hover effect */
+tr:hover { background-color: #e5e7eb; }
 </style>
 </head>
 
@@ -37,7 +40,6 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f6f9; }
             <i class="fas fa-users"></i> View Info
         </div>
 
-        <!-- ✅ NEW -->
         <div onclick="showPage('leave-requests', this)" class="nav-link p-3 rounded">
             <i class="fas fa-file-signature"></i> Leave Requests
         </div>
@@ -113,14 +115,15 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f6f9; }
             <input type="text" id="searchInput" placeholder="Search..." class="border p-2 rounded">
         </div>
 
-        <table class="w-full">
-            <thead class="bg-gray-800 text-white">
-                <tr>
-                    <th class="p-3">Name</th>
-                    <th class="p-3">Dept</th>
-                    <th class="p-3">Position</th>
-                    <th class="p-3">Contact</th>
-                    <th class="p-3">Actions</th>
+        <!-- ✅ UPDATED TABLE -->
+        <table class="w-full border-separate border-spacing-y-2">
+            <thead>
+                <tr class="bg-[#1f2a3a] text-white text-left">
+                    <th class="p-4 rounded-l-lg">Name</th>
+                    <th class="p-4">Dept</th>
+                    <th class="p-4">Position</th>
+                    <th class="p-4">Contact</th>
+                    <th class="p-4 rounded-r-lg">Actions</th>
                 </tr>
             </thead>
             <tbody id="tableBody"></tbody>
@@ -128,7 +131,7 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f6f9; }
     </div>
 </section>
 
-<!-- ✅ LEAVE REQUESTS -->
+<!-- LEAVE REQUESTS -->
 <section id="leave-requests" class="page-section">
     <h2 class="text-xl font-bold mb-4">Leave Requests</h2>
 
@@ -148,8 +151,6 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f6f9; }
 </main>
 
 <script>
-
-let isEdit = false;
 
 function logout() {
     if (confirm("Logout?")) window.location.href = "/logout";
@@ -172,14 +173,16 @@ async function loadEmployees() {
 
     data.forEach(emp => {
         tbody.innerHTML += `
-        <tr>
-            <td class="p-2">${emp[1]}</td>
-            <td class="p-2">${emp[2]}</td>
-            <td class="p-2">${emp[3]}</td>
-            <td class="p-2">${emp[4]}</td>
-            <td class="p-2">
-                <button onclick="editEmployee('${emp[0]}','${emp[1]}','${emp[2]}','${emp[3]}','${emp[4]}')" class="bg-yellow-500 px-2 py-1 text-white">Edit</button>
-                <button onclick="deleteEmployee('${emp[0]}')" class="bg-red-500 px-2 py-1 text-white">Delete</button>
+        <tr class="bg-gray-100 shadow-sm">
+            <td class="p-4 rounded-l-lg">${emp[1]}</td>
+            <td class="p-4">${emp[2]}</td>
+            <td class="p-4">${emp[3]}</td>
+            <td class="p-4">${emp[4]}</td>
+            <td class="p-4 rounded-r-lg space-x-2">
+                <button onclick="editEmployee('${emp[0]}','${emp[1]}','${emp[2]}','${emp[3]}','${emp[4]}')" 
+                    class="bg-yellow-500 px-3 py-1 text-white rounded">Edit</button>
+                <button onclick="deleteEmployee('${emp[0]}')" 
+                    class="bg-red-500 px-3 py-1 text-white rounded">Delete</button>
             </td>
         </tr>`;
     });
@@ -187,8 +190,6 @@ async function loadEmployees() {
     document.getElementById("employeeCount").innerText = data.length;
 }
 
-////////////////////////////////////////////////////
-// 🔥 LEAVE SYSTEM
 ////////////////////////////////////////////////////
 async function loadLeaves() {
     const res = await fetch("/get_all_leaves");
