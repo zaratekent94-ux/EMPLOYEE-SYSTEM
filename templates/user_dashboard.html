@@ -67,6 +67,26 @@ body {
 
     <h2 class="text-xl font-bold mb-6">Dashboard Overview</h2>
 
+    <!-- STATUS TRACKING -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white p-4 rounded-xl shadow border-l-4 border-yellow-500">
+            <p class="text-sm text-gray-500">Pending</p>
+            <p class="text-2xl font-bold" id="pendingCount">0</p>
+        </div>
+        <div class="bg-white p-4 rounded-xl shadow border-l-4 border-green-500">
+            <p class="text-sm text-gray-500">Approved</p>
+            <p class="text-2xl font-bold" id="approvedCount">0</p>
+        </div>
+        <div class="bg-white p-4 rounded-xl shadow border-l-4 border-red-500">
+            <p class="text-sm text-gray-500">Rejected</p>
+            <p class="text-2xl font-bold" id="rejectedCount">0</p>
+        </div>
+        <div class="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500">
+            <p class="text-sm text-gray-500">Total</p>
+            <p class="text-2xl font-bold" id="totalCount">0</p>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
 
         <div class="bg-gradient-to-r from-blue-500 to-blue-700 text-white p-6 rounded-xl shadow-lg">
@@ -227,7 +247,7 @@ body {
 <div id="notif" class="section">
     <div class="bg-white p-6 rounded-xl shadow">
         <h2 class="text-xl font-bold mb-4">Notifications</h2>
-        <p>No notifications available.</p>
+        <div id="notifList" class="space-y-3"></div>
     </div>
 </div>
 
@@ -249,6 +269,11 @@ function showSection(sectionId, element = null) {
     });
 
     if (element) element.classList.add("nav-active");
+
+    // Load notifications when switching to notif tab
+    if (sectionId === "notif") {
+        loadNotifications();
+    }
 }
 
 async function loadMyLeave() {
@@ -258,26 +283,70 @@ async function loadMyLeave() {
     const table = document.getElementById("leaveTable");
     table.innerHTML = "";
 
+    // Count statuses
+    let pending = 0, approved = 0, rejected = 0;
+
     data.forEach(item => {
+        // Update counts
+        if (item.status === 'Pending') pending++;
+        else if (item.status === 'Approved') approved++;
+        else if (item.status === 'Rejected') rejected++;
+
+        const statusClass = 
+            item.status === 'Pending' ? 'text-yellow-500' :
+            item.status === 'Approved' ? 'text-green-500' :
+            'text-red-500';
+        
         table.innerHTML += `
         <tr class="bg-gray-100 text-center">
             <td class="p-2">${item.type}</td>
-            <td class="p-2">${item.start_date} - ${item.end_date}</td>
+            <td class="p-2">${item.dates}</td>
             <td class="p-2">${item.reason}</td>
-            <td class="p-2 font-bold ${
-                item.status === 'Pending' ? 'text-yellow-500' :
-                item.status === 'Approved' ? 'text-green-500' :
-                'text-red-500'
-            }">${item.status}</td>
+            <td class="p-2 font-bold ${statusClass}">${item.status}</td>
             <td class="p-2">${item.comment || '-'}</td>
             <td class="p-2">-</td>
         </tr>`;
+    });
+
+    // Update status counts
+    document.getElementById("pendingCount").innerText = pending;
+    document.getElementById("approvedCount").innerText = approved;
+    document.getElementById("rejectedCount").innerText = rejected;
+    document.getElementById("totalCount").innerText = data.length;
+}
+
+async function loadNotifications() {
+    const res = await fetch("/get_notifications");
+    const data = await res.json();
+
+    const container = document.getElementById("notifList");
+    container.innerHTML = "";
+
+    if (data.length === 0) {
+        container.innerHTML = "<p class='text-gray-500'>No notifications.</p>";
+        return;
+    }
+
+    data.forEach(item => {
+        const isRejected = item.status === 'Rejected';
+        const icon = isRejected ? 'fa-times-circle text-red-500' : 'fa-check-circle text-green-500';
+        const message = isRejected 
+            ? `Your leave request was <strong>rejected</strong>. Reason: ${item.comment || 'No reason'}`
+            : `Your leave request was <strong>approved</strong>.`;
+
+        container.innerHTML += `
+        <div class="p-4 bg-gray-50 rounded-lg border-l-4 ${isRejected ? 'border-red-500' : 'border-green-500'}">
+            <i class="fas ${icon} mr-2"></i>
+            <span>${message}</span>
+            <p class="text-sm text-gray-400 mt-1">${item.reason}</p>
+        </div>`;
     });
 }
 
 window.onload = function(){
     showSection('dashboard');
     loadMyLeave();
+    loadNotifications();
 };
 
 </script>

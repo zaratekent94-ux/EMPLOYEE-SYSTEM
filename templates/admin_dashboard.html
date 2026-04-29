@@ -15,8 +15,6 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f6f9; }
 .nav-link.active { background-color: #4382f6; }
 .page-section { display: none; }
 .page-section.active { display: block; }
-
-/* ✅ Optional hover effect */
 tr:hover { background-color: #e5e7eb; }
 </style>
 </head>
@@ -115,7 +113,6 @@ tr:hover { background-color: #e5e7eb; }
             <input type="text" id="searchInput" placeholder="Search..." class="border p-2 rounded">
         </div>
 
-        <!-- ✅ UPDATED TABLE -->
         <table class="w-full border-separate border-spacing-y-2">
             <thead>
                 <tr class="bg-[#1f2a3a] text-white text-left">
@@ -141,6 +138,7 @@ tr:hover { background-color: #e5e7eb; }
                 <th class="p-3">Employee</th>
                 <th class="p-3">Reason</th>
                 <th class="p-3">Status</th>
+                <th class="p-3">Comment</th>
                 <th class="p-3">Action</th>
             </tr>
         </thead>
@@ -162,6 +160,14 @@ function showPage(id, el) {
 
     document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
     el.classList.add('active');
+
+    // Reset form when switching to add-employee
+    if (id === 'add-employee') {
+        document.getElementById("employeeForm").action = "/create_employee";
+        document.getElementById("formTitle").innerText = "Create Employee";
+        document.getElementById("employeeForm").reset();
+        document.getElementById("form-username").readOnly = false;
+    }
 }
 
 async function loadEmployees() {
@@ -179,10 +185,8 @@ async function loadEmployees() {
             <td class="p-4">${emp[3]}</td>
             <td class="p-4">${emp[4]}</td>
             <td class="p-4 rounded-r-lg space-x-2">
-                <button onclick="editEmployee('${emp[0]}','${emp[1]}','${emp[2]}','${emp[3]}','${emp[4]}')" 
-                    class="bg-yellow-500 px-3 py-1 text-white rounded">Edit</button>
-                <button onclick="deleteEmployee('${emp[0]}')" 
-                    class="bg-red-500 px-3 py-1 text-white rounded">Delete</button>
+                <button onclick="editEmployee('${emp[0]}')" class="bg-yellow-500 px-3 py-1 text-white rounded">Edit</button>
+                <button onclick="deleteEmployee('${emp[0]}')" class="bg-red-500 px-3 py-1 text-white rounded">Delete</button>
             </td>
         </tr>`;
     });
@@ -190,7 +194,6 @@ async function loadEmployees() {
     document.getElementById("employeeCount").innerText = data.length;
 }
 
-////////////////////////////////////////////////////
 async function loadLeaves() {
     const res = await fetch("/get_all_leaves");
     const data = await res.json();
@@ -208,6 +211,7 @@ async function loadLeaves() {
                 item[3] === 'Approved' ? 'text-green-500' :
                 'text-red-500'
             }">${item[3]}</td>
+            <td class="p-3">${item[4] || '-'}</td>
             <td class="p-3 space-x-2">
                 <button onclick="updateLeave(${item[0]}, 'Approved')" class="bg-green-500 text-white px-2 py-1 rounded">Approve</button>
                 <button onclick="updateLeave(${item[0]}, 'Rejected')" class="bg-red-500 text-white px-2 py-1 rounded">Reject</button>
@@ -218,11 +222,63 @@ async function loadLeaves() {
     document.getElementById("leaveCount").innerText = data.length;
 }
 
+async function editEmployee(username) {
+    const res = await fetch("/get_employee/" + username);
+    const emp = await res.json();
+    
+    if (!emp || !emp.username) return;
+
+    // Populate form
+    document.getElementById("form-name").value = emp.name || "";
+    document.getElementById("form-dept").value = emp.dept || "";
+    document.getElementById("form-pos").value = emp.position || "";
+    document.getElementById("form-phone").value = emp.phone || "";
+    document.getElementById("form-username").value = emp.username;
+    document.getElementById("form-username").readOnly = true;
+    document.getElementById("form-password").value = "";
+
+    // Change form action
+    document.getElementById("employeeForm").action = "/update_employee";
+    document.getElementById("formTitle").innerText = "Update Employee";
+
+    // Show add-employee section
+    showPage('add-employee', document.querySelectorAll('.nav-link')[1]);
+}
+
+async function deleteEmployee(username) {
+    if (!confirm("Delete this employee?")) return;
+
+    const res = await fetch("/delete_employee", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ username })
+    });
+
+    const data = await res.json();
+    alert(data.message);
+    loadEmployees();
+}
+
+/* ✅ FIXED FUNCTION */
 async function updateLeave(id, status) {
+    let comment = "";
+
+    if (status === "Rejected") {
+        comment = prompt("Enter reason for rejection:");
+
+        if (!comment || comment.trim() === "") {
+            alert("You must enter a reason before rejecting!");
+            return;
+        }
+
+    } else {
+        comment = "Approved";
+    }
+
     const res = await fetch("/update_leave_status", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ id, status })
+        body: JSON.stringify({ id, status, comment })
     });
 
     const data = await res.json();
