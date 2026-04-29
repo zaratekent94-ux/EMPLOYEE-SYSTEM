@@ -3,28 +3,39 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Employee Dashboard</title>
+<title>EILMS - User Dashboard</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: #f3f6f9;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+.sidebar { background: linear-gradient(180deg, #1a233a 0%, #0d1321 100%); }
+.nav-link { transition: all 0.3s ease; cursor: pointer; border-radius: 10px; }
+.nav-link:hover { background-color: rgba(255,255,255,0.1); }
+.nav-link.active { background: linear-gradient(90deg, #4382f6 0%, #3366ff 100%); box-shadow: 0 4px 15px rgba(67, 130, 246, 0.4); }
+.page-section { display: none; animation: fadeIn 0.3s ease; }
+.page-section.active { display: block; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
-.sidebar {
-    background-color: #1a233a;
+
+.stat-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+.stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+
+.status-badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
 }
-.section {
-    display: none;
-}
-.section.active {
-    display: block;
-}
-.nav-active {
-    background-color: #2563eb !important;
-}
+.status-pending { background: #fef3c7; color: #d97706; }
+.status-approved { background: #d1fae5; color: #059669; }
+.status-rejected { background: #fee2e2; color: #dc2626; }
 </style>
 </head>
 
@@ -32,323 +43,400 @@ body {
 
 <!-- SIDEBAR -->
 <aside class="sidebar w-64 text-white p-4 flex flex-col">
-    <h1 class="text-2xl font-bold mb-6">EILMS</h1>
+    <div class="text-center pb-6 border-b border-gray-700">
+        <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            EILMS
+        </h1>
+        <p class="text-xs text-gray-400 mt-1">Employee Panel</p>
+    </div>
 
-    <nav class="space-y-3">
-        <a href="#" onclick="showSection('dashboard', this)" class="nav-btn block p-3 rounded hover:bg-gray-700">
-            <i class="fas fa-home"></i> Dashboard
-        </a>
+    <nav class="space-y-2 mt-6">
+        <div onclick="showPage('home', this)" class="nav-link active p-3 flex items-center gap-3">
+            <i class="fas fa-home w-5"></i> <span>Dashboard</span>
+        </div>
 
-        <a href="#" onclick="showSection('profile', this)" class="nav-btn block p-3 rounded hover:bg-gray-700">
-            <i class="fas fa-user"></i> My Profile
-        </a>
+        <div onclick="showPage('leave', this)" class="nav-link p-3 flex items-center gap-3">
+            <i class="fas fa-calendar-minus w-5"></i> <span>Request Leave</span>
+        </div>
 
-        <a href="#" onclick="showSection('leave', this)" class="nav-btn block p-3 rounded hover:bg-gray-700">
-            <i class="fas fa-file-signature"></i> Leave
-        </a>
+        <div onclick="showPage('history', this)" class="nav-link p-3 flex items-center gap-3">
+            <i class="fas fa-history w-5"></i> <span>My Leaves</span>
+        </div>
 
-        <a href="#" onclick="showSection('notif', this)" class="nav-btn block p-3 rounded hover:bg-gray-700">
-            <i class="fas fa-bell"></i> Notifications
-        </a>
+        <div onclick="showPage('profile', this)" class="nav-link p-3 flex items-center gap-3">
+            <i class="fas fa-user w-5"></i> <span>Profile</span>
+        </div>
 
-        <a href="/logout" class="block p-3 rounded hover:bg-red-600">
-            <i class="fas fa-sign-out-alt"></i> Logout
-        </a>
+        <div onclick="logout()" class="nav-link p-3 flex items-center gap-3 mt-auto">
+            <i class="fas fa-sign-out-alt w-5"></i> <span>Logout</span>
+        </div>
     </nav>
 </aside>
 
 <!-- MAIN -->
 <main class="flex-1 p-6 overflow-y-auto">
 
-<h1 class="text-3xl font-bold mb-6">Welcome 👋</h1>
-
 <!-- DASHBOARD -->
-<div id="dashboard" class="section active">
-
-    <h2 class="text-xl font-bold mb-6">Dashboard Overview</h2>
-
-    <!-- STATUS TRACKING -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white p-4 rounded-xl shadow border-l-4 border-yellow-500">
-            <p class="text-sm text-gray-500">Pending</p>
-            <p class="text-2xl font-bold" id="pendingCount">0</p>
-        </div>
-        <div class="bg-white p-4 rounded-xl shadow border-l-4 border-green-500">
-            <p class="text-sm text-gray-500">Approved</p>
-            <p class="text-2xl font-bold" id="approvedCount">0</p>
-        </div>
-        <div class="bg-white p-4 rounded-xl shadow border-l-4 border-red-500">
-            <p class="text-sm text-gray-500">Rejected</p>
-            <p class="text-2xl font-bold" id="rejectedCount">0</p>
-        </div>
-        <div class="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500">
-            <p class="text-sm text-gray-500">Total</p>
-            <p class="text-2xl font-bold" id="totalCount">0</p>
+<section id="home" class="page-section active">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Welcome, <span id="userName">{{ name }}</span>!</h1>
+        <div class="flex items-center gap-4">
+            <button onclick="loadNotifications()" class="relative text-gray-600 hover:text-blue-600">
+                <i class="fas fa-bell text-xl"></i>
+                <span id="notifBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">0</span>
+            </button>
+            <div class="text-sm text-gray-500">
+                <i class="fas fa-calendar-alt"></i> <span id="currentDate"></span>
+            </div>
         </div>
     </div>
 
+    <!-- Notifications Alert -->
+    <div id="notificationAlert" class="hidden mb-6 p-4 rounded-lg border">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span id="notifIcon"></span>
+                <span id="notifMessage" class="text-sm"></span>
+            </div>
+            <button onclick="dismissNotification()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-
-        <div class="bg-gradient-to-r from-blue-500 to-blue-700 text-white p-6 rounded-xl shadow-lg">
+        <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-2xl shadow-lg">
             <div class="flex justify-between items-center">
                 <div>
-                    <h3 class="font-bold">My Profile</h3>
-                    <p class="text-sm">View your details</p>
+                    <p class="text-blue-100 text-sm">Leave Credits</p>
+                    <p class="text-4xl font-bold" id="leaveCredits">{{ credits }}</p>
+                    <p class="text-blue-200 text-sm">days remaining</p>
                 </div>
-                <i class="fas fa-user text-3xl"></i>
+                <div class="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-calendar-check text-2xl"></i>
+                </div>
             </div>
         </div>
 
-        <div class="bg-gradient-to-r from-green-500 to-green-700 text-white p-6 rounded-xl shadow-lg">
+        <div class="stat-card bg-gradient-to-br from-yellow-500 to-orange-500 text-white p-6 rounded-2xl shadow-lg">
             <div class="flex justify-between items-center">
                 <div>
-                    <h3 class="font-bold">Leave Requests</h3>
-                    <p class="text-sm">Submit and track leave</p>
+                    <p class="text-yellow-100 text-sm">Pending</p>
+                    <p class="text-4xl font-bold" id="pendingCount">0</p>
+                    <p class="text-yellow-200 text-sm">requests</p>
                 </div>
-                <i class="fas fa-file-signature text-3xl"></i>
+                <div class="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-clock text-2xl"></i>
+                </div>
             </div>
         </div>
 
-        <div class="bg-gradient-to-r from-yellow-500 to-orange-500 text-white p-6 rounded-xl shadow-lg">
+        <div class="stat-card bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-2xl shadow-lg">
             <div class="flex justify-between items-center">
                 <div>
-                    <h3 class="font-bold">Notifications</h3>
-                    <p class="text-sm">Check updates</p>
+                    <p class="text-green-100 text-sm">Approved</p>
+                    <p class="text-4xl font-bold" id="approvedCount">0</p>
+                    <p class="text-green-200 text-sm">leaves</p>
                 </div>
-                <i class="fas fa-bell text-3xl"></i>
+                <div class="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-check-circle text-2xl"></i>
+                </div>
             </div>
         </div>
-
     </div>
 
-    <div class="bg-white p-6 rounded-xl shadow">
-        <h2 class="font-bold mb-4">Quick Info</h2>
-        <p>👤 {{ user[1] }}</p>
-        <p>🏢 {{ user[2] }}</p>
-        <p>💼 {{ user[3] }}</p>
+    <!-- Recent Leaves -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <h2 class="text-lg font-bold text-gray-800 mb-4">
+            <i class="fas fa-clock mr-2 text-blue-500"></i>Recent Leave Requests
+        </h2>
+        <table class="w-full">
+            <thead class="bg-gray-50 text-gray-600 text-sm">
+                <tr>
+                    <th class="p-3 text-left">Type</th>
+                    <th class="p-3 text-left">Dates</th>
+                    <th class="p-3 text-left">Status</th>
+                    <th class="p-3 text-left">Comment</th>
+                </tr>
+            </thead>
+            <tbody id="recentLeaves" class="text-sm"></tbody>
+        </table>
     </div>
+</section>
 
-</div>
+<!-- REQUEST LEAVE -->
+<section id="leave" class="page-section">
+    <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-2xl mx-auto">
+        <h2 class="text-xl font-bold text-gray-800 mb-6">
+            <i class="fas fa-calendar-minus mr-2 text-blue-500"></i>Request Leave
+        </h2>
 
-<!-- ✅ PROFILE (ENHANCED ONLY) -->
-<div id="profile" class="section">
-    <div class="bg-white p-8 rounded-xl shadow max-w-4xl mx-auto">
+        <div class="bg-blue-50 p-4 rounded-lg mb-6">
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <p class="text-gray-500">Employee</p>
+                    <p class="font-bold text-gray-800">{{ name }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Department</p>
+                    <p class="font-bold text-gray-800">{{ dept }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Position</p>
+                    <p class="font-bold text-gray-800">{{ position }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Available Credits</p>
+                    <p class="font-bold text-green-600">{{ credits }} days</p>
+                </div>
+            </div>
+        </div>
 
-        <!-- HEADER -->
-        <div class="flex items-center gap-6 mb-8">
+        <form id="leaveForm" onsubmit="submitLeave(event)" class="space-y-4">
+            <input type="hidden" name="username" value="{{ username }}">
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Leave Type</label>
+                <select name="type" class="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                    <option value="">Select Leave Type</option>
+                    <option value="Sick Leave">Sick Leave</option>
+                    <option value="Vacation Leave">Vacation Leave</option>
+                    <option value="Personal Leave">Personal Leave</option>
+                    <option value="Emergency Leave">Emergency Leave</option>
+                </select>
+            </div>
 
-            <div class="w-24 h-24 rounded-full bg-blue-600 flex items-center justify-center text-white text-4xl font-bold shadow-lg">
-                {{ user[1][0] }}
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                    <input type="date" name="start_date" class="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                    <input type="date" name="end_date" class="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                </div>
             </div>
 
             <div>
-                <h2 class="text-3xl font-bold">{{ user[1] }}</h2>
-                <p class="text-gray-500 text-lg">{{ user[3] }}</p>
-                <p class="text-sm text-gray-400">{{ user[2] }}</p>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                <textarea name="reason" rows="4" class="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter reason for leave..." required></textarea>
             </div>
 
-            <div class="ml-auto">
-                <button class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 shadow">
-                    <i class="fas fa-edit mr-2"></i>Edit Profile
-                </button>
-            </div>
-        </div>
-
-        <!-- INFO -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-            <div class="bg-gray-50 p-5 rounded-lg">
-                <p class="text-sm text-gray-500">Username</p>
-                <p class="text-lg font-semibold">{{ user[0] }}</p>
-            </div>
-
-            <div class="bg-gray-50 p-5 rounded-lg">
-                <p class="text-sm text-gray-500">Full Name</p>
-                <p class="text-lg font-semibold">{{ user[1] }}</p>
-            </div>
-
-            <div class="bg-gray-50 p-5 rounded-lg">
-                <p class="text-sm text-gray-500">Department</p>
-                <p class="text-lg font-semibold">{{ user[2] }}</p>
-            </div>
-
-            <div class="bg-gray-50 p-5 rounded-lg">
-                <p class="text-sm text-gray-500">Position</p>
-                <p class="text-lg font-semibold">{{ user[3] }}</p>
-            </div>
-
-            <div class="bg-gray-50 p-5 rounded-lg md:col-span-2">
-                <p class="text-sm text-gray-500">Phone</p>
-                <p class="text-lg font-semibold">{{ user[4] }}</p>
-            </div>
-
-        </div>
-
-        <!-- EXTRA -->
-        <div class="mt-8 border-t pt-6">
-            <h3 class="font-bold text-lg mb-2">Account Info</h3>
-            <div class="flex justify-between text-gray-600">
-                <p>Status: <span class="text-green-600 font-semibold">Active</span></p>
-                <p>Role: Employee</p>
-            </div>
-        </div>
-
-    </div>
-</div>
-
-<!-- LEAVE (UNCHANGED) -->
-<div id="leave" class="section">
-    <div class="bg-white p-6 rounded-xl shadow mb-6">
-        <h2 class="text-xl font-bold mb-4">Submit Leave Request</h2>
-
-        <form method="POST" action="/submit_leave" class="space-y-4">
-
-            <select name="type" class="w-full border p-3 rounded" required>
-                <option value="">Select Leave Type</option>
-                <option value="Sick">Sick Leave</option>
-                <option value="Vacation">Vacation Leave</option>
-                <option value="Emergency">Emergency Leave</option>
-            </select>
-
-            <div class="grid grid-cols-2 gap-4">
-                <input type="date" name="start_date" class="border p-3 rounded" required>
-                <input type="date" name="end_date" class="border p-3 rounded" required>
-            </div>
-
-            <textarea name="reason" placeholder="Enter reason..."
-                class="w-full border p-3 rounded" required></textarea>
-
-            <button class="bg-blue-600 text-white px-4 py-2 rounded">
-                Submit Leave
+            <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white p-4 rounded-lg font-bold hover:shadow-lg transition-all">
+                <i class="fas fa-paper-plane mr-2"></i>Submit Request
             </button>
         </form>
     </div>
+</section>
 
-    <div class="bg-white p-6 rounded-xl shadow">
-        <h2 class="text-xl font-bold mb-4">My Leave Requests</h2>
+<!-- MY LEAVES HISTORY -->
+<section id="history" class="page-section">
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold text-gray-800">
+                <i class="fas fa-history mr-2 text-blue-500"></i>My Leave History
+            </h2>
+            <button onclick="loadMyLeaves()" class="text-blue-500 hover:underline">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
 
-        <table class="w-full border-separate border-spacing-y-2">
-            <thead>
-                <tr class="bg-gray-800 text-white text-center">
-                    <th class="p-3">Type</th>
-                    <th class="p-3">Dates</th>
-                    <th class="p-3">Reason</th>
-                    <th class="p-3">Status</th>
-                    <th class="p-3">Comment</th>
-                    <th class="p-3">Action</th>
-                </tr>
-            </thead>
-            <tbody id="leaveTable"></tbody>
-        </table>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-800 text-white">
+                    <tr>
+                        <th class="p-4 text-left rounded-tl-lg">#</th>
+                        <th class="p-4 text-left">Type</th>
+                        <th class="p-4 text-left">Dates</th>
+                        <th class="p-4 text-left">Reason</th>
+                        <th class="p-4 text-left">Status</th>
+                        <th class="p-4 text-left rounded-tr-lg">Comment</th>
+                    </tr>
+                </thead>
+                <tbody id="leaveTable" class="text-gray-700"></tbody>
+            </table>
+        </div>
     </div>
-</div>
+</section>
 
-<!-- NOTIFICATIONS -->
-<div id="notif" class="section">
-    <div class="bg-white p-6 rounded-xl shadow">
-        <h2 class="text-xl font-bold mb-4">Notifications</h2>
-        <div id="notifList" class="space-y-3"></div>
+<!-- PROFILE -->
+<section id="profile" class="page-section">
+    <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-2xl mx-auto">
+        <h2 class="text-xl font-bold text-gray-800 mb-6">
+            <i class="fas fa-user mr-2 text-blue-500"></i>My Profile
+        </h2>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div class="p-4 bg-gray-50 rounded-lg">
+                <p class="text-sm text-gray-500">Username</p>
+                <p class="font-bold text-gray-800">{{ username }}</p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded-lg">
+                <p class="text-sm text-gray-500">Name</p>
+                <p class="font-bold text-gray-800">{{ name }}</p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded-lg">
+                <p class="text-sm text-gray-500">Department</p>
+                <p class="font-bold text-gray-800">{{ dept }}</p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded-lg">
+                <p class="text-sm text-gray-500">Position</p>
+                <p class="font-bold text-gray-800">{{ position }}</p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded-lg col-span-2">
+                <p class="text-sm text-gray-500">Contact</p>
+                <p class="font-bold text-gray-800">{{ phone }}</p>
+            </div>
+        </div>
     </div>
-</div>
+</section>
 
 </main>
 
 <script>
+document.getElementById("currentDate").innerText = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+});
 
-function showSection(sectionId, element = null) {
-    const sections = ["dashboard","profile","leave","notif"];
-
-    sections.forEach(id => {
-        document.getElementById(id).classList.remove("active");
-    });
-
-    document.getElementById(sectionId).classList.add("active");
-
-    document.querySelectorAll(".nav-btn").forEach(btn => {
-        btn.classList.remove("nav-active");
-    });
-
-    if (element) element.classList.add("nav-active");
-
-    // Load notifications when switching to notif tab
-    if (sectionId === "notif") {
-        loadNotifications();
+function logout() {
+    if (confirm("Are you sure you want to logout?")) {
+        window.location.href = "/logout";
     }
 }
 
-async function loadMyLeave() {
-    const res = await fetch("/get_my_leave");
-    const data = await res.json();
-
-    const table = document.getElementById("leaveTable");
-    table.innerHTML = "";
-
-    // Count statuses
-    let pending = 0, approved = 0, rejected = 0;
-
-    data.forEach(item => {
-        // Update counts
-        if (item.status === 'Pending') pending++;
-        else if (item.status === 'Approved') approved++;
-        else if (item.status === 'Rejected') rejected++;
-
-        const statusClass = 
-            item.status === 'Pending' ? 'text-yellow-500' :
-            item.status === 'Approved' ? 'text-green-500' :
-            'text-red-500';
-        
-        table.innerHTML += `
-        <tr class="bg-gray-100 text-center">
-            <td class="p-2">${item.type}</td>
-            <td class="p-2">${item.dates}</td>
-            <td class="p-2">${item.reason}</td>
-            <td class="p-2 font-bold ${statusClass}">${item.status}</td>
-            <td class="p-2">${item.comment || '-'}</td>
-            <td class="p-2">-</td>
-        </tr>`;
-    });
-
-    // Update status counts
-    document.getElementById("pendingCount").innerText = pending;
-    document.getElementById("approvedCount").innerText = approved;
-    document.getElementById("rejectedCount").innerText = rejected;
-    document.getElementById("totalCount").innerText = data.length;
+function showPage(id, el) {
+    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+    if (el) el.classList.add('active');
 }
 
 async function loadNotifications() {
-    const res = await fetch("/get_notifications");
-    const data = await res.json();
+    try {
+        const res = await fetch("/get_notifications");
+        const data = await res.json();
+        
+        console.log("Notifications:", data);
 
-    const container = document.getElementById("notifList");
-    container.innerHTML = "";
-
-    if (data.length === 0) {
-        container.innerHTML = "<p class='text-gray-500'>No notifications.</p>";
-        return;
+        const badge = document.getElementById("notifBadge");
+        if (data.length > 0) {
+            badge.innerText = data.length;
+            badge.classList.remove('hidden');
+            
+            // Show latest notification
+            const latest = data[0];
+            showNotification(latest);
+        } else {
+            badge.classList.add('hidden');
+        }
+    } catch (e) {
+        console.error("Error loading notifications:", e);
     }
-
-    data.forEach(item => {
-        const isRejected = item.status === 'Rejected';
-        const icon = isRejected ? 'fa-times-circle text-red-500' : 'fa-check-circle text-green-500';
-        const message = isRejected 
-            ? `Your leave request was <strong>rejected</strong>. Reason: ${item.comment || 'No reason'}`
-            : `Your leave request was <strong>approved</strong>.`;
-
-        container.innerHTML += `
-        <div class="p-4 bg-gray-50 rounded-lg border-l-4 ${isRejected ? 'border-red-500' : 'border-green-500'}">
-            <i class="fas ${icon} mr-2"></i>
-            <span>${message}</span>
-            <p class="text-sm text-gray-400 mt-1">${item.reason}</p>
-        </div>`;
-    });
 }
 
-window.onload = function(){
-    showSection('dashboard');
-    loadMyLeave();
+function showNotification(notif) {
+    const alert = document.getElementById("notificationAlert");
+    const message = document.getElementById("notifMessage");
+    const icon = document.getElementById("notifIcon");
+    
+    let iconHtml = "";
+    let colorClass = "";
+    
+    if (notif.status === "Approved") {
+        iconHtml = '<i class="fas fa-check-circle text-green-500 text-xl"></i>';
+        colorClass = "bg-green-50 border-green-200 text-green-700";
+    } else if (notif.status === "Rejected") {
+        iconHtml = '<i class="fas fa-times-circle text-red-500 text-xl"></i>';
+        colorClass = "bg-red-50 border-red-200 text-red-700";
+    } else {
+        iconHtml = '<i class="fas fa-clock text-yellow-500 text-xl"></i>';
+        colorClass = "bg-yellow-50 border-yellow-200 text-yellow-700";
+    }
+    
+    icon.innerHTML = iconHtml;
+    message.innerHTML = `
+        <strong>Leave ${notif.status}</strong>: 
+        Your ${notif.type} request (${notif.start_date} to ${notif.end_date}) 
+        has been <strong>${notif.status}</strong>.
+        ${notif.comment ? `<br><span class="text-sm mt-1 block">Admin Comment: "${notif.comment}"</span>` : ''}
+    `;
+    
+    alert.className = `mb-6 p-4 rounded-lg border ${colorClass}`;
+    alert.classList.remove('hidden');
+}
+
+function dismissNotification() {
+    document.getElementById("notificationAlert").classList.add('hidden');
+}
+
+async function loadMyLeaves() {
+    try {
+        const res = await fetch("/get_my_leave");
+        const data = await res.json();
+
+        console.log("Leave data:", data);
+
+        const pending = data.filter(l => l.status === 'Pending').length;
+        const approved = data.filter(l => l.status === 'Approved').length;
+
+        document.getElementById("pendingCount").innerText = pending;
+        document.getElementById("approvedCount").innerText = approved;
+
+        // Recent leaves
+        document.getElementById("recentLeaves").innerHTML = data.slice(0, 5).map(l => `
+            <tr class="border-b hover:bg-gray-50">
+                <td class="p-3 font-medium">${l.type}</td>
+                <td class="p-3 text-sm text-gray-500">${l.dates}</td>
+                <td class="p-3">
+                    <span class="status-badge status-${l.status.toLowerCase()}">${l.status}</span>
+                </td>
+                <td class="p-3 text-gray-500">${l.comment || '-'}</td>
+            </tr>
+        `).join('');
+
+        // Full table
+        document.getElementById("leaveTable").innerHTML = data.map((l, i) => `
+            <tr class="border-b hover:bg-gray-50">
+                <td class="p-4 font-medium">${i + 1}</td>
+                <td class="p-4 font-medium">${l.type}</td>
+                <td class="p-4 text-sm">${l.dates}</td>
+                <td class="p-4 max-w-xs truncate">${l.reason}</td>
+                <td class="p-4">
+                    <span class="status-badge status-${l.status.toLowerCase()}">${l.status}</span>
+                </td>
+                <td class="p-4 text-gray-500">${l.comment || '-'}</td>
+            </tr>
+        `).join('');
+    } catch (e) {
+        console.error("Error loading leaves:", e);
+    }
+}
+
+async function submitLeave(e) {
+    e.preventDefault();
+    
+    const formData = new URLSearchParams(new FormData(document.getElementById("leaveForm")));
+    
+    const res = await fetch("/submit_leave", {
+        method: "POST",
+        body: formData
+    });
+
+    if (res.ok || res.redirected) {
+        alert("Leave request submitted successfully!");
+        document.getElementById("leaveForm").reset();
+        showPage('history', document.querySelectorAll('.nav-link')[2]);
+        loadMyLeaves();
+    } else {
+        alert("Error submitting leave request");
+    }
+}
+
+window.onload = function() {
+    loadMyLeaves();
     loadNotifications();
 };
-
 </script>
 
 </body>
