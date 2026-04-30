@@ -38,9 +38,14 @@ class DataManager:
     def _initialize_default_data(self):
         """Initialize default users"""
         default_users = [
-            UserModel("admin", "admin123", "admin", "Administrator", "IT", "System Admin", "+1234567890", 0),
-            UserModel("john", "john123", "user", "John Doe", "Engineering", "Software Engineer", "+1987654321", 15),
-            UserModel("jane", "jane123", "user", "Jane Smith", "Human Resources", "HR Manager", "+1123456789", 15)
+            UserModel("admin", "1", "admin", "Administrator", "IT", "System Admin", "+1234567890", 0),
+            UserModel("john", "1", "user", "John Doe", "Engineering", "Software Engineer", "+1987654321", 30),
+            UserModel("jane", "1", "user", "Jane Smith", "Human Resources", "HR Manager", "+1123456789", 30),
+            UserModel("alice", "1", "user", "Alice Johnson", "Marketing", "Marketing Specialist", "+1098765432", 30),
+            UserModel("bob", "1", "user", "Bob Brown", "Sales", "Sales Representative", "+1023456789", 30),
+            UserModel("charlie", "1", "user", "Charlie Davis", "Finance", "Financial Analyst", "+1012345678", 30),
+            UserModel("dave", "1", "user", "Dave Wilson", "Customer Support", "Support Specialist", "+1001234567", 30),  
+            UserModel("eve", "1", "user", "Eve Miller", "Research and Development", "R&D Engineer", "+1234509876", 30)  
         ]
         self._users = default_users
     
