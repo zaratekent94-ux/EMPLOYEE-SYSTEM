@@ -1,6 +1,13 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session
+# app.py
+# =========================
+# FLASK APPLICATION (OOP Structure)
+# =========================
+
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, send_file
 from accounts import User, Admin, Employee
-from data import leave_requests, users, leave_credit_history
+from data import data_manager
+from datetime import datetime
+import io
 
 app = Flask(__name__)
 app.secret_key = "secret123"
@@ -91,9 +98,9 @@ def get_employee(username):
     if session.get("role") != "admin":
         return jsonify({}), 403
     
-    for user in users:
-        if user["username"] == username:
-            return jsonify(user)
+    user = data_manager.get_user_by_username(username)
+    if user:
+        return jsonify(user.to_dict())
     return jsonify({}), 404
 
 
@@ -126,24 +133,18 @@ def user_dashboard():
     user_data = emp.get_profile()
     
     if user_data:
-        user = user_data[0]
-        
-        # Get leave credits
-        credits = 15
-        for u in users:
-            if u["username"] == session["username"]:
-                credits = u.get("leave_credits", 15)
-                break
+        credits = emp.get_leave_credits()
         
         return render_template(
             "user_dashboard.html", 
-            user=user, 
+            user=(user_data["username"], user_data["name"], user_data["dept"], 
+                  user_data["position"], user_data["phone"]),
             credits=credits,
-            username=user[0],
-            name=user[1],
-            dept=user[2],
-            position=user[3],
-            phone=user[4]
+            username=user_data["username"],
+            name=user_data["name"],
+            dept=user_data["dept"],
+            position=user_data["position"],
+            phone=user_data["phone"]
         )
     
     return redirect(url_for("login_page"))
@@ -203,21 +204,17 @@ def get_leave_credits():
         return jsonify({"credits": 0, "history": []})
     
     username = session["username"]
+    credits = data_manager.get_leave_credits(username)
+    history = data_manager.get_leave_credit_history(username)
     
-    for user in users:
-        if user["username"] == username:
-            return jsonify({
-                "credits": user.get("leave_credits", 15),
-                "history": leave_credit_history.get(username, [])
-            })
-    
-    return jsonify({"credits": 0, "history": []})
+    return jsonify({
+        "credits": credits,
+        "history": history
+    })
 
 
 @app.route("/update_leave_status", methods=["POST"])
 def update_leave_status():
-    global leave_credit_history
-    
     if session.get("role") != "admin":
         return jsonify({"message": "Unauthorized"}), 403
     
@@ -231,32 +228,21 @@ def update_leave_status():
 
     # If approved, deduct leave credits
     if status == "Approved":
-        for leave in leave_requests:
-            if leave["id"] == leave_id:
-                username = leave["username"]
-                
-                from datetime import datetime
-                start = datetime.strptime(leave["start_date"], "%Y-%m-%d")
-                end = datetime.strptime(leave["end_date"], "%Y-%m-%d")
-                days = (end - start).days + 1
-                
-                for user in users:
-                    if user["username"] == username:
-                        current_credits = user.get("leave_credits", 15)
-                        user["leave_credits"] = current_credits - days
-                        
-                        if username not in leave_credit_history:
-                            leave_credit_history[username] = []
-                        
-                        leave_credit_history[username].append({
-                            "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                            "action": "Deducted",
-                            "amount": days,
-                            "balance": user["leave_credits"],
-                            "reason": f"Leave ID {leave_id}"
-                        })
-                        break
-                break
+        leave = data_manager.get_leave_request_by_id(leave_id)
+        if leave:
+            username = leave.username
+            
+            start = datetime.strptime(leave.start_date, "%Y-%m-%d")
+            end = datetime.strptime(leave.end_date, "%Y-%m-%d")
+            days = (end - start).days + 1
+            
+            current_credits = data_manager.get_leave_credits(username)
+            new_credits = current_credits - days
+            
+            data_manager.update_leave_credits(username, new_credits)
+            data_manager.add_leave_credit_history(
+                username, "Deducted", days, new_credits, f"Leave ID {leave_id}"
+            )
 
     return jsonify({"message": f"{status} successfully"})
 
@@ -267,29 +253,202 @@ def get_notifications():
         return jsonify([])
 
     username = session["username"]
-    user_notifications = []
+    leaves = data_manager.get_leave_requests_by_username(username)
+    
+    user_notifications = [
+        {
+            "id": leave.leave_id,
+            "type": leave.leave_type,
+            "status": leave.status,
+            "start_date": leave.start_date,
+            "end_date": leave.end_date,
+            "comment": leave.comment,
+            "seen": leave.seen
+        }
+        for leave in leaves
+        if leave.status in ["Approved", "Rejected"]
+    ]
 
-    for l in leave_requests:
-        if l["username"] == username and l.get("status") in ["Approved", "Rejected"]:
-            user_notifications.append({
-                "id": l["id"],
-                "type": l.get("type", ""),
-                "status": l["status"],
-                "start_date": l.get("start_date", ""),
-                "end_date": l.get("end_date", ""),
-                "comment": l.get("comment", ""),
-                "seen": l.get("seen", False)
-            })
-
-    # Mark as seen
-    for l in leave_requests:
-        if l["username"] == username:
-            l["seen"] = True
+    # Mark all as seen
+    for leave in leaves:
+        if leave.status in ["Approved", "Rejected"]:
+            data_manager.update_leave_request(leave.leave_id, seen=True)
 
     # Reverse to show newest first
     user_notifications.reverse()
     
     return jsonify(user_notifications)
+
+
+# =========================
+# REPORT & EXPORT ROUTES
+# =========================
+
+@app.route("/generate_employee_report")
+def generate_employee_report():
+    """Generate employee report data"""
+    if session.get("role") != "admin":
+        return jsonify({"message": "Unauthorized"}), 403
+    
+    employees = data_manager.get_users_by_role("user")
+    report_data = {
+        "title": "Employee Report",
+        "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "total_employees": len(employees),
+        "employees": [
+            {
+                "username": emp.username,
+                "name": emp.name,
+                "department": emp.dept,
+                "position": emp.position,
+                "phone": emp.phone,
+                "leave_credits": emp.leave_credits
+            }
+            for emp in employees
+        ]
+    }
+    return jsonify(report_data)
+
+
+@app.route("/generate_leave_report")
+def generate_leave_report():
+    """Generate leave report data"""
+    if session.get("role") != "admin":
+        return jsonify({"message": "Unauthorized"}), 403
+    
+    leaves = data_manager.get_all_leave_requests()
+    report_data = {
+        "title": "Leave Report",
+        "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "total_requests": len(leaves),
+        "pending": len([l for l in leaves if l.status == "Pending"]),
+        "approved": len([l for l in leaves if l.status == "Approved"]),
+        "rejected": len([l for l in leaves if l.status == "Rejected"]),
+        "leaves": [
+            {
+                "id": l.leave_id,
+                "username": l.username,
+                "type": l.leave_type,
+                "start_date": l.start_date,
+                "end_date": l.end_date,
+                "reason": l.reason,
+                "status": l.status,
+                "comment": l.comment,
+                "created_at": l.created_at
+            }
+            for l in leaves
+        ]
+    }
+    return jsonify(report_data)
+
+
+@app.route("/export_employees/<format>")
+def export_employees(format):
+    """Export employees to PDF or Excel"""
+    if session.get("role") != "admin":
+        return jsonify({"message": "Unauthorized"}), 403
+    
+    employees = data_manager.get_users_by_role("user")
+    
+    if format == "excel":
+        # Create CSV content
+        output = io.StringIO()
+        output.write("Username,Name,Department,Position,Phone,Leave Credits\n")
+        for emp in employees:
+            output.write(f"{emp.username},{emp.name},{emp.dept},{emp.position},{emp.phone},{emp.leave_credits}\n")
+        
+        output.seek(0)
+        return send_file(
+            io.BytesIO(output.getvalue().encode('utf-8')),
+            mimetype="text/csv",
+            as_attachment=True,
+            download_name=f"employee_report_{datetime.now().strftime('%Y%m%d')}.csv"
+        )
+    
+    elif format == "pdf":
+        # Create simple text report for PDF
+        output = io.StringIO()
+        output.write("=" * 60 + "\n")
+        output.write("EMPLOYEE REPORT\n")
+        output.write("=" * 60 + "\n")
+        output.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        output.write(f"Total Employees: {len(employees)}\n")
+        output.write("=" * 60 + "\n\n")
+        
+        for emp in employees:
+            output.write(f"Username: {emp.username}\n")
+            output.write(f"Name: {emp.name}\n")
+            output.write(f"Department: {emp.dept}\n")
+            output.write(f"Position: {emp.position}\n")
+            output.write(f"Phone: {emp.phone}\n")
+            output.write(f"Leave Credits: {emp.leave_credits}\n")
+            output.write("-" * 40 + "\n")
+        
+        output.seek(0)
+        return send_file(
+            io.BytesIO(output.getvalue().encode('utf-8')),
+            mimetype="text/plain",
+            as_attachment=True,
+            download_name=f"employee_report_{datetime.now().strftime('%Y%m%d')}.txt"
+        )
+    
+    return jsonify({"message": "Invalid format"}), 400
+
+
+@app.route("/export_leaves/<format>")
+def export_leaves(format):
+    """Export leaves to PDF or Excel"""
+    if session.get("role") != "admin":
+        return jsonify({"message": "Unauthorized"}), 403
+    
+    leaves = data_manager.get_all_leave_requests()
+    
+    if format == "excel":
+        output = io.StringIO()
+        output.write("ID,Employee,Type,Start Date,End Date,Reason,Status,Comment,Created At\n")
+        for l in leaves:
+            output.write(f'{l.leave_id},{l.username},{l.leave_type},{l.start_date},{l.end_date},"{l.reason}",{l.status},"{l.comment}",{l.created_at}\n')
+        
+        output.seek(0)
+        return send_file(
+            io.BytesIO(output.getvalue().encode('utf-8')),
+            mimetype="text/csv",
+            as_attachment=True,
+            download_name=f"leave_report_{datetime.now().strftime('%Y%m%d')}.csv"
+        )
+    
+    elif format == "pdf":
+        output = io.StringIO()
+        output.write("=" * 60 + "\n")
+        output.write("LEAVE REPORT\n")
+        output.write("=" * 60 + "\n")
+        output.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        output.write(f"Total Requests: {len(leaves)}\n")
+        output.write(f"Pending: {len([l for l in leaves if l.status == 'Pending'])}\n")
+        output.write(f"Approved: {len([l for l in leaves if l.status == 'Approved'])}\n")
+        output.write(f"Rejected: {len([l for l in leaves if l.status == 'Rejected'])}\n")
+        output.write("=" * 60 + "\n\n")
+        
+        for l in leaves:
+            output.write(f"ID: {l.leave_id}\n")
+            output.write(f"Employee: {l.username}\n")
+            output.write(f"Type: {l.leave_type}\n")
+            output.write(f"Dates: {l.start_date} to {l.end_date}\n")
+            output.write(f"Reason: {l.reason}\n")
+            output.write(f"Status: {l.status}\n")
+            output.write(f"Comment: {l.comment}\n")
+            output.write(f"Created: {l.created_at}\n")
+            output.write("-" * 40 + "\n")
+        
+        output.seek(0)
+        return send_file(
+            io.BytesIO(output.getvalue().encode('utf-8')),
+            mimetype="text/plain",
+            as_attachment=True,
+            download_name=f"leave_report_{datetime.now().strftime('%Y%m%d')}.txt"
+        )
+    
+    return jsonify({"message": "Invalid format"}), 400
 
 
 # =========================

@@ -76,6 +76,10 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
             <span id="leaveBadge" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
         </div>
 
+        <div onclick="showPage('reports', this)" class="nav-link p-3 flex items-center gap-3">
+            <i class="fas fa-chart-bar w-5"></i> <span>Reports</span>
+        </div>
+
         <div onclick="logout()" class="nav-link p-3 flex items-center gap-3 mt-auto">
             <i class="fas fa-sign-out-alt w-5"></i> <span>Logout</span>
         </div>
@@ -287,6 +291,78 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
     </div>
 </section>
 
+<!-- REPORTS -->
+<section id="reports" class="page-section">
+    <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+        <h2 class="text-xl font-bold text-gray-800 mb-6">
+            <i class="fas fa-chart-bar mr-2 text-blue-500"></i>Reports & Export
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Employee Report -->
+            <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-users text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800">Employee Report</h3>
+                        <p class="text-sm text-gray-500" id="empReportCount">0 employees</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="exportEmployees('excel')" class="flex-1 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition">
+                        <i class="fas fa-file-excel mr-2"></i>Excel
+                    </button>
+                    <button onclick="exportEmployees('pdf')" class="flex-1 bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition">
+                        <i class="fas fa-file-pdf mr-2"></i>PDF
+                    </button>
+                </div>
+            </div>
+
+            <!-- Leave Report -->
+            <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-calendar-minus text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800">Leave Report</h3>
+                        <p class="text-sm text-gray-500" id="leaveReportCount">0 requests</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="exportLeaves('excel')" class="flex-1 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition">
+                        <i class="fas fa-file-excel mr-2"></i>Excel
+                    </button>
+                    <button onclick="exportLeaves('pdf')" class="flex-1 bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition">
+                        <i class="fas fa-file-pdf mr-2"></i>PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report Preview -->
+        <div class="mt-8">
+            <h3 class="font-bold text-gray-800 mb-4">Report Preview</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500">Total Employees</p>
+                    <p class="text-2xl font-bold text-blue-600" id="reportEmpCount">0</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500">Approved Leaves</p>
+                    <p class="text-2xl font-bold text-green-600" id="reportApproved">0</p>
+                </div>
+                <div class="bg-yellow-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500">Pending Leaves</p>
+                    <p class="text-2xl font-bold text-yellow-600" id="reportPending">0</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 </main>
 
 <script>
@@ -315,6 +391,10 @@ function showPage(id, el) {
         document.getElementById("employeeForm").reset();
         document.getElementById("form-username").readOnly = false;
     }
+    
+    if (id === 'reports') {
+        loadReports();
+    }
 }
 
 let allEmployees = [];
@@ -332,15 +412,15 @@ async function loadEmployees() {
     tbody.innerHTML = data.map((emp, i) => `
         <tr class="border-b hover:bg-gray-50 transition">
             <td class="p-4 font-medium">${i + 1}</td>
-            <td class="p-4 font-medium text-blue-600">${emp[1]}</td>
-            <td class="p-4">${emp[2]}</td>
-            <td class="p-4">${emp[3]}</td>
-            <td class="p-4">${emp[4]}</td>
+            <td class="p-4 font-medium text-blue-600">${emp.name}</td>
+            <td class="p-4">${emp.dept}</td>
+            <td class="p-4">${emp.position}</td>
+            <td class="p-4">${emp.phone}</td>
             <td class="p-4">
-                <button onclick="editEmployee('${emp[0]}')" class="action-btn bg-yellow-500 text-white mr-2">
+                <button onclick="editEmployee('${emp.username}')" class="action-btn bg-yellow-500 text-white mr-2">
                     <i class="fas fa-edit"></i> Edit
                 </button>
-                <button onclick="deleteEmployee('${emp[0]}')" class="action-btn bg-red-500 text-white">
+                <button onclick="deleteEmployee('${emp.username}')" class="action-btn bg-red-500 text-white">
                     <i class="fas fa-trash"></i> Delete
                 </button>
             </td>
@@ -351,10 +431,10 @@ async function loadEmployees() {
     const recentTable = document.getElementById("recentTable");
     recentTable.innerHTML = data.slice(-5).reverse().map(emp => `
         <tr class="border-b">
-            <td class="p-3 font-medium">${emp[1]}</td>
-            <td class="p-3">${emp[2]}</td>
-            <td class="p-3">${emp[3]}</td>
-            <td class="p-3 text-gray-500">${emp[4]}</td>
+            <td class="p-3 font-medium">${emp.name}</td>
+            <td class="p-3">${emp.dept}</td>
+            <td class="p-3">${emp.position}</td>
+            <td class="p-3 text-gray-500">${emp.phone}</td>
         </tr>
     `).join('');
 }
@@ -364,9 +444,9 @@ async function loadLeaves() {
     const data = await res.json();
 
     // Update stats
-    const pending = data.filter(l => l[3] === 'Pending').length;
-    const approved = data.filter(l => l[3] === 'Approved').length;
-    const rejected = data.filter(l => l[3] === 'Rejected').length;
+    const pending = data.filter(l => l.status === 'Pending').length;
+    const approved = data.filter(l => l.status === 'Approved').length;
+    const rejected = data.filter(l => l.status === 'Rejected').length;
 
     document.getElementById("pendingCount").innerText = pending;
     document.getElementById("approvedCount").innerText = approved;
@@ -385,22 +465,22 @@ async function loadLeaves() {
     const table = document.getElementById("leaveTable");
     table.innerHTML = data.map(item => `
         <tr class="border-b hover:bg-gray-50">
-            <td class="p-4 font-medium">${item[1]}</td>
+            <td class="p-4 font-medium">${item.username}</td>
             <td class="p-4">
-                <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-sm">${item[2]}</span>
+                <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-sm">${item.type}</span>
             </td>
-            <td class="p-4 text-sm text-gray-500">${item[5]}</td>
-            <td class="p-4 max-w-xs truncate" title="${item[6]}">${item[6]}</td>
+            <td class="p-4 text-sm text-gray-500">${item.dates}</td>
+            <td class="p-4 max-w-xs truncate" title="${item.reason}">${item.reason}</td>
             <td class="p-4">
-                <span class="status-badge status-${item[3].toLowerCase()}">${item[3]}</span>
+                <span class="status-badge status-${item.status.toLowerCase()}">${item.status}</span>
             </td>
-            <td class="p-4 text-gray-500">${item[4] || '-'}</td>
+            <td class="p-4 text-gray-500">${item.comment || '-'}</td>
             <td class="p-4 text-center">
-                ${item[3] === 'Pending' ? `
-                    <button onclick="updateLeave(${item[0]}, 'Approved')" class="action-btn bg-green-500 text-white mr-2">
+                ${item.status === 'Pending' ? `
+                    <button onclick="updateLeave(${item.id}, 'Approved')" class="action-btn bg-green-500 text-white mr-2">
                         <i class="fas fa-check"></i>
                     </button>
-                    <button onclick="updateLeave(${item[0]}, 'Rejected')" class="action-btn bg-red-500 text-white">
+                    <button onclick="updateLeave(${item.id}, 'Rejected')" class="action-btn bg-red-500 text-white">
                         <i class="fas fa-times"></i>
                     </button>
                 ` : '<span class="text-gray-400">-</span>'}
@@ -415,9 +495,9 @@ function searchEmployees() {
     const noResults = document.getElementById("noResults");
 
     const filtered = allEmployees.filter(emp => 
-        emp[1].toLowerCase().includes(query) ||
-        emp[2].toLowerCase().includes(query) ||
-        emp[3].toLowerCase().includes(query)
+        emp.name.toLowerCase().includes(query) ||
+        emp.dept.toLowerCase().includes(query) ||
+        emp.position.toLowerCase().includes(query)
     );
 
     if (filtered.length === 0) {
@@ -428,15 +508,15 @@ function searchEmployees() {
         tbody.innerHTML = filtered.map((emp, i) => `
             <tr class="border-b hover:bg-gray-50 transition">
                 <td class="p-4 font-medium">${i + 1}</td>
-                <td class="p-4 font-medium text-blue-600">${emp[1]}</td>
-                <td class="p-4">${emp[2]}</td>
-                <td class="p-4">${emp[3]}</td>
-                <td class="p-4">${emp[4]}</td>
+                <td class="p-4 font-medium text-blue-600">${emp.name}</td>
+                <td class="p-4">${emp.dept}</td>
+                <td class="p-4">${emp.position}</td>
+                <td class="p-4">${emp.phone}</td>
                 <td class="p-4">
-                    <button onclick="editEmployee('${emp[0]}')" class="action-btn bg-yellow-500 text-white mr-2">
+                    <button onclick="editEmployee('${emp.username}')" class="action-btn bg-yellow-500 text-white mr-2">
                         <i class="fas fa-edit"></i> Edit
                     </button>
-                    <button onclick="deleteEmployee('${emp[0]}')" class="action-btn bg-red-500 text-white">
+                    <button onclick="deleteEmployee('${emp.username}')" class="action-btn bg-red-500 text-white">
                         <i class="fas fa-trash"></i> Delete
                     </button>
                 </td>
@@ -508,6 +588,35 @@ window.onload = function() {
     loadEmployees();
     loadLeaves();
 };
+
+async function loadReports() {
+    try {
+        // Load employee report
+        const empRes = await fetch("/generate_employee_report");
+        const empData = await empRes.json();
+        
+        document.getElementById("empReportCount").innerText = empData.total_employees + " employees";
+        document.getElementById("reportEmpCount").innerText = empData.total_employees;
+        
+        // Load leave report
+        const leaveRes = await fetch("/generate_leave_report");
+        const leaveData = await leaveRes.json();
+        
+        document.getElementById("leaveReportCount").innerText = leaveData.total_requests + " requests";
+        document.getElementById("reportApproved").innerText = leaveData.approved;
+        document.getElementById("reportPending").innerText = leaveData.pending;
+    } catch (e) {
+        console.error("Error loading reports:", e);
+    }
+}
+
+function exportEmployees(format) {
+    window.location.href = "/export_employees/" + format;
+}
+
+function exportLeaves(format) {
+    window.location.href = "/export_leaves/" + format;
+}
 </script>
 
 </body>

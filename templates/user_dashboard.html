@@ -110,7 +110,7 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
             <div class="flex justify-between items-center">
                 <div>
                     <p class="text-blue-100 text-sm">Leave Credits</p>
-                    <p class="text-4xl font-bold" id="leaveCredits">{{ credits }}</p>
+                    <p class="text-4xl font-bold" id="leaveCredits">--</p>
                     <p class="text-blue-200 text-sm">days remaining</p>
                 </div>
                 <div class="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center">
@@ -188,7 +188,7 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
                 </div>
                 <div>
                     <p class="text-gray-500">Available Credits</p>
-                    <p class="font-bold text-green-600">{{ credits }} days</p>
+                    <p class="font-bold text-green-600" id="availableCredits">-- days</p>
                 </div>
             </div>
         </div>
@@ -383,6 +383,9 @@ async function loadMyLeaves() {
         document.getElementById("pendingCount").innerText = pending;
         document.getElementById("approvedCount").innerText = approved;
 
+        // Load leave credits
+        loadLeaveCredits();
+
         // Recent leaves
         document.getElementById("recentLeaves").innerHTML = data.slice(0, 5).map(l => `
             <tr class="border-b hover:bg-gray-50">
@@ -413,6 +416,23 @@ async function loadMyLeaves() {
     }
 }
 
+async function loadLeaveCredits() {
+    try {
+        const res = await fetch("/get_leave_credits");
+        const data = await res.json();
+        
+        document.getElementById("leaveCredits").innerText = data.credits;
+        
+        // Also update the available credits in the leave form
+        const availableCreditsEl = document.getElementById("availableCredits");
+        if (availableCreditsEl) {
+            availableCreditsEl.innerText = data.credits + " days";
+        }
+    } catch (e) {
+        console.error("Error loading leave credits:", e);
+    }
+}
+
 async function submitLeave(e) {
     e.preventDefault();
     
@@ -428,6 +448,7 @@ async function submitLeave(e) {
         document.getElementById("leaveForm").reset();
         showPage('history', document.querySelectorAll('.nav-link')[2]);
         loadMyLeaves();
+        loadLeaveCredits();
     } else {
         alert("Error submitting leave request");
     }
@@ -436,6 +457,7 @@ async function submitLeave(e) {
 window.onload = function() {
     loadMyLeaves();
     loadNotifications();
+    loadLeaveCredits();
 };
 </script>
 
