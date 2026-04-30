@@ -54,5 +54,31 @@ app.run(debug=True)
 # Module 1
 Login Module/ Login System: This is the first completed and functioning module of our Employee Information and Leave Management System. It allows users to securely log in using their username and password base on there role(Admin/Employee), ensuring that only authorized personnel can access the system. The module includes input validation to prevent incorrect or unauthorized entries and provides error messages for invalid login attempts. The login page is designed to be user-friendly and responsive, making it easy for users to navigate. By completing this module, we have established a secure and functional foundation for the rest of the system, which will handle employee records, leave requests, and other important features.
 
+Functionalites:
+- Create user account (Admin, Employee)
+- Login and logout system
+
 # Module 2
 Stage 2 focuses on the **Employee Account** module, which manages the storage and maintenance of employee information. In this stage, the system allows the storage of personal and job-related details while ensuring data accuracy through controlled updates of employee records. Access is strictly regulated: only HR or Admin personnel are permitted to edit or modify records, while employees are limited to viewing their own profiles. This ensures data security and prevents unauthorized changes. The flowchart below illustrates the step-by-step process, including account creation, verification, updating of records, and viewing of employee information, ensuring an organized and secure management system for all employee data.
+
+Functionalites:
+- Store personal and job details
+- Update employee records
+
+# Module 3
+This module allows authorized personnel such as supervisors or HR administrators to review employee leave requests and make decisions based on company policies. The admin can either approve or deny requests while providing comments to justify their decision. The system ensures that all approvals follow established company rules and guidelines. Additionally, it tracks the status of each request, allowing both administrators and employees to monitor progress and outcomes efficiently.
+
+Functionalities:
+- Review and approve/deny request
+- Add comments
+- Track approval status
+
+# Module 4
+This module manages and monitors employees leave credits within the system. It automatically updates leave balances whenever a leave request is approved, ensuring that deductions are accurately recorded. The system enforces rules to prevent employees from exceeding their available leave credits. Additionally, it displays the remaining leave balance for transparency and tracking purposes. If applicable, leave credits are reset annually based on company policy, ensuring proper allocation for each new period.
+
+Functionalities:
+- Automatically update leave credits 
+- Show remaining leaves
+
+# Module 5
+ON GOING...
