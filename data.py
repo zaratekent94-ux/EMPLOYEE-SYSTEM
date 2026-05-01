@@ -196,7 +196,251 @@ class DataManager:
     def leave_requests_to_dict_list(self) -> List[Dict[str, Any]]:
         """Convert all leave requests to dictionary list"""
         return [leave.to_dict() for leave in self._leave_requests]
+    
+    # =========================
+    # REPORT DATA METHODS
+    # =========================
+    
+    def get_employee_report_data(self) -> List[Dict[str, Any]]:
+        """Get employee report data - all users with details"""
+        report_data = []
+        for user in self._users:
+            # Get leave statistics for this user
+            user_leaves = self.get_leave_requests_by_username(user.username)
+            pending = sum(1 for l in user_leaves if l.status == "Pending")
+            approved = sum(1 for l in user_leaves if l.status == "Approved")
+            rejected = sum(1 for l in user_leaves if l.status == "Rejected")
+            
+            report_data.append({
+                "username": user.username,
+                "name": user.name,
+                "dept": user.dept,
+                "position": user.position,
+                "phone": user.phone,
+                "leave_credits": user.leave_credits,
+                "role": user.role,
+                "leave_requests": len(user_leaves),
+                "pending_leaves": pending,
+                "approved_leaves": approved,
+                "rejected_leaves": rejected
+            })
+        return report_data
+    
+    def get_leave_report_data(self, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """Get leave report data with optional filters"""
+        leaves = self._leave_requests
+        
+        # Apply filters if provided
+        if filters:
+            if "status" in filters and filters["status"]:
+                leaves = [l for l in leaves if l.status == filters["status"]]
+            if "username" in filters and filters["username"]:
+                leaves = [l for l in leaves if l.username == filters["username"]]
+            if "leave_type" in filters and filters["leave_type"]:
+                leaves = [l for l in leaves if l.leave_type == filters["leave_type"]]
+            if "start_date" in filters and filters["start_date"]:
+                leaves = [l for l in leaves if l.start_date >= filters["start_date"]]
+            if "end_date" in filters and filters["end_date"]:
+                leaves = [l for l in leaves if l.end_date <= filters["end_date"]]
+        
+        report_data = []
+        for leave in leaves:
+            user = self.get_user_by_username(leave.username)
+            report_data.append({
+                "leave_id": leave.leave_id,
+                "username": leave.username,
+                "employee_name": user.name if user else "Unknown",
+                "dept": user.dept if user else "",
+                "leave_type": leave.leave_type,
+                "start_date": leave.start_date,
+                "end_date": leave.end_date,
+                "reason": leave.reason,
+                "status": leave.status,
+                "comment": leave.comment,
+                "created_at": leave.created_at
+            })
+        return report_data
+    
+    def get_report_statistics(self) -> Dict[str, Any]:
+        """Get overall report statistics"""
+        total_employees = len(self._users)
+        total_leaves = len(self._leave_requests)
+        
+        status_counts = {"Pending": 0, "Approved": 0, "Rejected": 0}
+        leave_type_counts = {}
+        
+        for leave in self._leave_requests:
+            status_counts[leave.status] = status_counts.get(leave.status, 0) + 1
+            leave_type_counts[leave.leave_type] = leave_type_counts.get(leave.leave_type, 0) + 1
+        
+        # Department distribution
+        dept_counts = {}
+        for user in self._users:
+            dept_counts[user.dept] = dept_counts.get(user.dept, 0) + 1
+        
+        return {
+            "total_employees": total_employees,
+            "total_leave_requests": total_leaves,
+            "status_breakdown": status_counts,
+            "leave_type_breakdown": leave_type_counts,
+            "department_breakdown": dept_counts,
+            "active_users": len([u for u in self._users if u.role == "user"])
+        }
 
 
 # Global data manager instance
 data_manager = DataManager()
+
+
+# =========================
+# NOTIFICATION SERVICE
+# =========================
+
+class NotificationService:
+    """
+    NotificationService - handles real-time notifications
+    Supports in-app notifications (expandable for email/SMS)
+    """
+    
+    _instance = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+    
+    def __init__(self):
+        if self._initialized:
+            return
+        
+        # Notification storage: {username: [notifications]}
+        self._notifications: Dict[str, List[Dict[str, Any]]] = {}
+        self._initialized = True
+    
+    def add_notification(self, username: str, notification_type: str, title: str, 
+                        message: str, priority: str = "normal") -> bool:
+        """Add a notification for a user"""
+        if username not in self._notifications:
+            self._notifications[username] = []
+        
+        notification = {
+            "id": len(self._notifications[username]) + 1,
+            "type": notification_type,
+            "title": title,
+            "message": message,
+            "priority": priority,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "read": False
+        }
+        
+        self._notifications[username].append(notification)
+        return True
+    
+    def get_notifications(self, username: str, unread_only: bool = False) -> List[Dict[str, Any]]:
+        """Get notifications for a user"""
+        notifications = self._notifications.get(username, [])
+        
+        if unread_only:
+            return [n for n in notifications if not n.get("read", False)]
+        
+        return notifications
+    
+    def mark_as_read(self, username: str, notification_id: int) -> bool:
+        """Mark a notification as read"""
+        notifications = self._notifications.get(username, [])
+        
+        for notif in notifications:
+            if notif["id"] == notification_id:
+                notif["read"] = True
+                return True
+        
+        return False
+    
+    def mark_all_as_read(self, username: str) -> int:
+        """Mark all notifications as read for a user"""
+        notifications = self._notifications.get(username, [])
+        count = 0
+        
+        for notif in notifications:
+            if not notif.get("read", False):
+                notif["read"] = True
+                count += 1
+        
+        return count
+    
+    def get_unread_count(self, username: str) -> int:
+        """Get count of unread notifications"""
+        notifications = self._notifications.get(username, [])
+        return sum(1 for n in notifications if not n.get("read", False))
+    
+    def clear_notifications(self, username: str) -> bool:
+        """Clear all notifications for a user"""
+        if username in self._notifications:
+            self._notifications[username] = []
+            return True
+        return False
+    
+    # =========================
+    # EMAIL/SMS NOTIFICATION METHODS
+    # =========================
+    
+    def send_email_notification(self, email: str, subject: str, body: str) -> Dict[str, Any]:
+        """
+        Send email notification (placeholder - integrate with SMTP/email service)
+        Returns status of the send operation
+        """
+        # Placeholder for email integration
+        # In production, integrate with SMTP, SendGrid, etc.
+        return {
+            "success": True,
+            "method": "email",
+            "recipient": email,
+            "subject": subject,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+    
+    def send_sms_notification(self, phone: str, message: str) -> Dict[str, Any]:
+        """
+        Send SMS notification (placeholder - integrate with SMS gateway)
+        Returns status of the send operation
+        """
+        # Placeholder for SMS integration
+        # In production, integrate with Twilio, Nexmo, etc.
+        return {
+            "success": True,
+            "method": "sms",
+            "recipient": phone,
+            "message": message,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+    
+    def notify_leave_status_change(self, username: str, leave_id: int, 
+                                   status: str, comment: str = "") -> bool:
+        """Send notification when leave status changes"""
+        user = data_manager.get_user_by_username(username)
+        if not user:
+            return False
+        
+        title = f"Leave Request {status}"
+        message = f"Your leave request (ID: {leave_id}) has been {status}."
+        if comment:
+            message += f" Comment: {comment}"
+        
+        # Add in-app notification
+        self.add_notification(username, "leave_status", title, message, "high" if status == "Rejected" else "normal")
+        
+        return True
+    
+    def notify_new_leave_request(self, admin_username: str, username: str, 
+                                 leave_id: int, leave_type: str) -> bool:
+        """Notify admin of new leave request"""
+        title = "New Leave Request"
+        message = f"{username} submitted a new {leave_type} leave request (ID: {leave_id})"
+        
+        self.add_notification(admin_username, "new_leave", title, message, "high")
+        return True
+
+
+# Global notification service instance
+notification_service = NotificationService()

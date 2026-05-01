@@ -314,6 +314,7 @@ function showPage(id, el) {
 
 async function loadNotifications() {
     try {
+        // Load leave status notifications (existing)
         const res = await fetch("/get_notifications");
         const data = await res.json();
         
@@ -329,6 +330,21 @@ async function loadNotifications() {
             showNotification(latest);
         } else {
             badge.classList.add('hidden');
+        }
+        
+        // Also check for app notifications from notification service
+        try {
+            const appRes = await fetch("/get_unread_notification_count");
+            const appData = await appRes.json();
+            
+            // Update badge with total unread (leave + app notifications)
+            const totalUnread = data.length + appData.count;
+            if (totalUnread > 0) {
+                badge.innerText = totalUnread;
+                badge.classList.remove('hidden');
+            }
+        } catch (e) {
+            console.log("App notifications not available");
         }
     } catch (e) {
         console.error("Error loading notifications:", e);

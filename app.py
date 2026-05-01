@@ -5,7 +5,7 @@
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session, send_file
 from accounts import User, Admin, Employee
-from data import data_manager
+from data import data_manager, notification_service
 from datetime import datetime
 import io
 
@@ -244,6 +244,14 @@ def update_leave_status():
                 username, "Deducted", days, new_credits, f"Leave ID {leave_id}"
             )
 
+    # Send notification to user about status change
+    if status in ["Approved", "Rejected"]:
+        leave = data_manager.get_leave_request_by_id(leave_id)
+        if leave:
+            notification_service.notify_leave_status_change(
+                leave.username, leave_id, status, comment
+            )
+
     return jsonify({"message": f"{status} successfully"})
 
 
@@ -278,6 +286,115 @@ def get_notifications():
     user_notifications.reverse()
     
     return jsonify(user_notifications)
+
+
+# =========================
+# NOTIFICATION ROUTES
+# =========================
+
+@app.route("/get_app_notifications")
+def get_app_notifications():
+    """Get in-app notifications for current user"""
+    if "username" not in session:
+        return jsonify([]), 403
+    
+    username = session["username"]
+    unread_only = request.args.get("unread_only", "false").lower() == "true"
+    
+    notifications = notification_service.get_notifications(username, unread_only)
+    return jsonify(notifications)
+
+
+@app.route("/get_unread_notification_count")
+def get_unread_notification_count():
+    """Get count of unread notifications"""
+    if "username" not in session:
+        return jsonify({"count": 0})
+    
+    username = session["username"]
+    count = notification_service.get_unread_count(username)
+    
+    return jsonify({"count": count})
+
+
+@app.route("/mark_notification_read", methods=["POST"])
+def mark_notification_read():
+    """Mark a notification as read"""
+    if "username" not in session:
+        return jsonify({"message": "Unauthorized"}), 403
+    
+    data = request.get_json()
+    notification_id = data.get("notification_id")
+    
+    if not notification_id:
+        return jsonify({"message": "Invalid notification ID"}), 400
+    
+    username = session["username"]
+    success = notification_service.mark_as_read(username, notification_id)
+    
+    if success:
+        return jsonify({"message": "Notification marked as read"})
+    return jsonify({"message": "Notification not found"}), 404
+
+
+@app.route("/mark_all_notifications_read", methods=["POST"])
+def mark_all_notifications_read():
+    """Mark all notifications as read"""
+    if "username" not in session:
+        return jsonify({"message": "Unauthorized"}), 403
+    
+    username = session["username"]
+    count = notification_service.mark_all_as_read(username)
+    
+    return jsonify({"message": f"{count} notifications marked as read"})
+
+
+@app.route("/send_email_notification", methods=["POST"])
+def send_email_notification():
+    """Send email notification (admin only)"""
+    if session.get("role") != "admin":
+        return jsonify({"message": "Unauthorized"}), 403
+    
+    data = request.get_json()
+    email = data.get("email")
+    subject = data.get("subject")
+    body = data.get("body")
+    
+    if not email or not subject or not body:
+        return jsonify({"message": "Missing required fields"}), 400
+    
+    # Check for spam - simple rate limiting
+    # In production, implement proper rate limiting
+    result = notification_service.send_email_notification(email, subject, body)
+    
+    return jsonify(result)
+
+
+@app.route("/send_sms_notification", methods=["POST"])
+def send_sms_notification():
+    """Send SMS notification (admin only)"""
+    if session.get("role") != "admin":
+        return jsonify({"message": "Unauthorized"}), 403
+    
+    data = request.get_json()
+    phone = data.get("phone")
+    message = data.get("message")
+    
+    if not phone or not message:
+        return jsonify({"message": "Missing required fields"}), 400
+    
+    # Check for spam - message length and content validation
+    if len(message) > 500:
+        return jsonify({"message": "Message too long (max 500 characters)"}), 400
+    
+    # Basic spam check - reject if message contains too many URLs
+    url_count = message.lower().count("http")
+    if url_count > 2:
+        return jsonify({"message": "Message flagged as potential spam"}), 400
+    
+    result = notification_service.send_sms_notification(phone, message)
+    
+    return jsonify(result)
 
 
 # =========================

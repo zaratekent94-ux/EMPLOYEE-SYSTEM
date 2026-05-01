@@ -80,6 +80,11 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
             <i class="fas fa-chart-bar w-5"></i> <span>Reports</span>
         </div>
 
+        <div onclick="showPage('notifications', this)" class="nav-link p-3 flex items-center gap-3">
+            <i class="fas fa-bell w-5"></i> <span>Notifications</span>
+            <span id="notifBadge" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+        </div>
+
         <div onclick="logout()" class="nav-link p-3 flex items-center gap-3 mt-auto">
             <i class="fas fa-sign-out-alt w-5"></i> <span>Logout</span>
         </div>
@@ -363,6 +368,72 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
     </div>
 </section>
 
+<!-- NOTIFICATIONS -->
+<section id="notifications" class="page-section">
+    <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+        <h2 class="text-xl font-bold text-gray-800 mb-6">
+            <i class="fas fa-bell mr-2 text-blue-500"></i>Notifications & Alerts
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Send Email Notification -->
+            <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-envelope text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800">Send Email</h3>
+                        <p class="text-sm text-gray-500">Email notification to employee</p>
+                    </div>
+                </div>
+                <form onsubmit="sendEmailNotification(event)">
+                    <input type="email" id="emailTo" placeholder="Recipient email" class="w-full mb-3 p-3 border rounded-lg" required>
+                    <input type="text" id="emailSubject" placeholder="Subject" class="w-full mb-3 p-3 border rounded-lg" required>
+                    <textarea id="emailBody" placeholder="Message" rows="3" class="w-full mb-3 p-3 border rounded-lg" required></textarea>
+                    <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition">
+                        <i class="fas fa-paper-plane mr-2"></i>Send Email
+                    </button>
+                </form>
+            </div>
+
+            <!-- Send SMS Notification -->
+            <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-sms text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800">Send SMS</h3>
+                        <p class="text-sm text-gray-500">SMS notification to employee</p>
+                    </div>
+                </div>
+                <form onsubmit="sendSmsNotification(event)">
+                    <input type="tel" id="smsTo" placeholder="Phone number (e.g., +1234567890)" class="w-full mb-3 p-3 border rounded-lg" required>
+                    <textarea id="smsMessage" placeholder="Message (max 500 characters)" rows="3" maxlength="500" class="w-full mb-3 p-3 border rounded-lg" required></textarea>
+                    <p class="text-xs text-gray-400 mb-3"><span id="smsCharCount">0</span>/500 characters</p>
+                    <button type="submit" class="w-full bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition">
+                        <i class="fas fa-paper-plane mr-2"></i>Send SMS
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Recent Notifications -->
+        <div class="mt-8">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-gray-800">Recent Notifications</h3>
+                <button onclick="markAllNotificationsRead()" class="text-sm text-blue-500 hover:underline">
+                    Mark all as read
+                </button>
+            </div>
+            <div id="adminNotificationsList" class="space-y-3 max-h-96 overflow-y-auto">
+                <p class="text-gray-500 text-center py-4">Loading notifications...</p>
+            </div>
+        </div>
+    </div>
+</section>
+
 </main>
 
 <script>
@@ -394,6 +465,10 @@ function showPage(id, el) {
     
     if (id === 'reports') {
         loadReports();
+    }
+    
+    if (id === 'notifications') {
+        loadAdminNotifications();
     }
 }
 
@@ -610,13 +685,134 @@ async function loadReports() {
     }
 }
 
-function exportEmployees(format) {
-    window.location.href = "/export_employees/" + format;
+// =========================
+// NOTIFICATION FUNCTIONS
+// =========================
+
+async function loadAdminNotifications() {
+    try {
+        const res = await fetch("/get_app_notifications?unread_only=false");
+        const notifications = await res.json();
+        
+        const container = document.getElementById("adminNotificationsList");
+        
+        if (notifications.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-center py-4">No notifications yet</p>';
+            return;
+        }
+        
+        container.innerHTML = notifications.map(notif => `
+            <div class="p-4 border rounded-lg ${notif.read ? 'bg-gray-50' : 'bg-blue-50 border-blue-200'}">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="font-bold text-gray-800">${notif.title}</p>
+                        <p class="text-sm text-gray-600">${notif.message}</p>
+                        <p class="text-xs text-gray-400 mt-2">${notif.timestamp}</p>
+                    </div>
+                    ${notif.read ? '' : '<span class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">New</span>'}
+                </div>
+            </div>
+        `).join('');
+        
+        // Update badge
+        updateNotificationBadge();
+    } catch (e) {
+        console.error("Error loading notifications:", e);
+    }
 }
 
-function exportLeaves(format) {
-    window.location.href = "/export_leaves/" + format;
+async function updateNotificationBadge() {
+    try {
+        const res = await fetch("/get_unread_notification_count");
+        const data = await res.json();
+        
+        const badge = document.getElementById("notifBadge");
+        if (data.count > 0) {
+            badge.innerText = data.count;
+            badge.classList.remove("hidden");
+        } else {
+            badge.classList.add("hidden");
+        }
+    } catch (e) {
+        console.error("Error updating badge:", e);
+    }
 }
+
+async function markAllNotificationsRead() {
+    try {
+        const res = await fetch("/mark_all_notifications_read", { method: "POST" });
+        const data = await res.json();
+        
+        alert(data.message);
+        loadAdminNotifications();
+    } catch (e) {
+        console.error("Error marking notifications as read:", e);
+    }
+}
+
+async function sendEmailNotification(event) {
+    event.preventDefault();
+    
+    const email = document.getElementById("emailTo").value;
+    const subject = document.getElementById("emailSubject").value;
+    const body = document.getElementById("emailBody").value;
+    
+    try {
+        const res = await fetch("/send_email_notification", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ email, subject, body })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+            alert("Email sent successfully!");
+            document.getElementById("emailTo").value = "";
+            document.getElementById("emailSubject").value = "";
+            document.getElementById("emailBody").value = "";
+        } else {
+            alert("Error: " + data.message);
+        }
+    } catch (e) {
+        console.error("Error sending email:", e);
+        alert("Failed to send email");
+    }
+}
+
+async function sendSmsNotification(event) {
+    event.preventDefault();
+    
+    const phone = document.getElementById("smsTo").value;
+    const message = document.getElementById("smsMessage").value;
+    
+    try {
+        const res = await fetch("/send_sms_notification", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ phone, message })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+            alert("SMS sent successfully!");
+            document.getElementById("smsTo").value = "";
+            document.getElementById("smsMessage").value = "";
+            document.getElementById("smsCharCount").innerText = "0";
+        } else {
+            alert("Error: " + data.message);
+        }
+    } catch (e) {
+        console.error("Error sending SMS:", e);
+        alert("Failed to send SMS");
+    }
+}
+
+// SMS character counter
+document.getElementById("smsMessage")?.addEventListener("input", function() {
+    document.getElementById("smsCharCount").innerText = this.value.length;
+});
 </script>
 
 </body>
