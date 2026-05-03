@@ -6,7 +6,7 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session, send_file
 from accounts import User, Admin, Employee
 from data import data_manager, notification_service
-from datetime import datetime
+from datetime import datetime, timedelta
 import io
 
 app = Flask(__name__)
@@ -610,6 +610,120 @@ def export_leaves(format):
         )
     
     return jsonify({"message": "Invalid format"}), 400
+
+
+# =========================
+# ANALYTICS ROUTES
+# =========================
+
+@app.route("/get_leave_analytics")
+def get_leave_analytics():
+    """Get leave analytics data for charts"""
+    if "username" not in session:
+        return jsonify({"message": "Unauthorized"}), 403
+
+    username = session["username"]
+    emp = Employee(username)
+
+    # Get user's leave data
+    leaves = emp.get_my_leave()
+
+    # Calculate analytics
+    total_requests = len(leaves)
+    approved_count = len([l for l in leaves if l['status'] == 'Approved'])
+    pending_count = len([l for l in leaves if l['status'] == 'Pending'])
+    rejected_count = len([l for l in leaves if l['status'] == 'Rejected'])
+
+    # Leave type distribution
+    leave_types = {}
+    for leave in leaves:
+        leave_type = leave['type']
+        if leave_type not in leave_types:
+            leave_types[leave_type] = 0
+        leave_types[leave_type] += 1
+
+    # Monthly leave requests (last 12 months)
+    monthly_data = {}
+    current_date = datetime.now()
+
+    for i in range(12):
+        month_date = current_date - timedelta(days=i*30)
+        month_key = month_date.strftime('%Y-%m')
+        monthly_data[month_key] = 0
+
+    for leave in leaves:
+        try:
+            leave_date = datetime.strptime(leave['start_date'], '%Y-%m-%d')
+            month_key = leave_date.strftime('%Y-%m')
+            if month_key in monthly_data:
+                monthly_data[month_key] += 1
+        except:
+            continue
+
+    # Sort monthly data
+    sorted_months = sorted(monthly_data.items())
+
+    analytics = {
+        "total_requests": total_requests,
+        "approved_count": approved_count,
+        "pending_count": pending_count,
+        "rejected_count": rejected_count,
+        "leave_types": leave_types,
+        "monthly_trend": {
+            "labels": [datetime.strptime(m[0], '%Y-%m').strftime('%b %Y') for m in sorted_months],
+            "data": [m[1] for m in sorted_months]
+        },
+        "approval_rate": round((approved_count / total_requests * 100) if total_requests > 0 else 0, 1)
+    }
+
+    return jsonify(analytics)
+
+
+@app.route("/get_leave_calendar")
+def get_leave_calendar():
+    """Get leave calendar data"""
+    if "username" not in session:
+        return jsonify({"message": "Unauthorized"}), 403
+
+    username = session["username"]
+    emp = Employee(username)
+
+    leaves = emp.get_my_leave()
+
+    calendar_events = []
+    for leave in leaves:
+        try:
+            start_date = datetime.strptime(leave['start_date'], '%Y-%m-%d')
+            end_date = datetime.strptime(leave['end_date'], '%Y-%m-%d')
+
+            # Create event for each day in the range
+            current_date = start_date
+            while current_date <= end_date:
+                event = {
+                    "title": f"{leave['type']} - {leave['status']}",
+                    "start": current_date.strftime('%Y-%m-%d'),
+                    "end": current_date.strftime('%Y-%m-%d'),
+                    "status": leave['status'],
+                    "type": leave['type'],
+                    "reason": leave['reason'][:50] + "..." if len(leave['reason']) > 50 else leave['reason']
+                }
+
+                # Color coding based on status
+                if leave['status'] == 'Approved':
+                    event["color"] = "#10B981"  # green
+                elif leave['status'] == 'Pending':
+                    event["color"] = "#F59E0B"  # yellow
+                elif leave['status'] == 'Rejected':
+                    event["color"] = "#EF4444"  # red
+
+                calendar_events.append(event)
+                current_date += timedelta(days=1)
+
+        except Exception as e:
+            print(f"Error processing leave {leave}: {e}")
+            continue
+
+    return jsonify(calendar_events)
 
 
 # =========================

@@ -224,4 +224,4 @@ class Admin(User):
             leave_id,
             status=status,
             comment=comment
-        )
+        )   

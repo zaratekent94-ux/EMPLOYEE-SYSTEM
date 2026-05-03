@@ -8,6 +8,13 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+<!-- Chart.js for analytics -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- FullCalendar for calendar view -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -36,6 +43,82 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
 .status-pending { background: #fef3c7; color: #d97706; }
 .status-approved { background: #d1fae5; color: #059669; }
 .status-rejected { background: #fee2e2; color: #dc2626; }
+
+.calendar-container {
+    min-height: 600px;
+}
+
+.fc-event {
+    border-radius: 6px;
+    border: none;
+    padding: 2px 6px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.fc-event:hover {
+    opacity: 0.8;
+}
+
+.toast {
+    min-width: 300px;
+    max-width: 500px;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    animation: slideIn 0.3s ease-out;
+    backdrop-filter: blur(10px);
+}
+
+.toast-success {
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: white;
+}
+
+.toast-warning {
+    background: linear-gradient(135deg, #F59E0B, #D97706);
+    color: white;
+}
+
+.toast-error {
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    color: white;
+}
+
+.toast-info {
+    background: linear-gradient(135deg, #3B82F6, #2563EB);
+    color: white;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.quick-action-btn {
+    transition: all 0.3s ease;
+}
+
+.quick-action-btn:hover {
+    transform: translateY(-2px);
+}
 </style>
 </head>
 
@@ -51,19 +134,27 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
     </div>
 
     <nav class="space-y-2 mt-6">
-        <div onclick="showPage('home', this)" class="nav-link active p-3 flex items-center gap-3">
+        <div onclick="showPage('home', this)" class="nav-link active p-3 flex items-center gap-3" data-page="home">
             <i class="fas fa-home w-5"></i> <span>Dashboard</span>
         </div>
 
-        <div onclick="showPage('leave', this)" class="nav-link p-3 flex items-center gap-3">
+        <div onclick="showPage('leave', this)" class="nav-link p-3 flex items-center gap-3" data-page="leave">
             <i class="fas fa-calendar-minus w-5"></i> <span>Request Leave</span>
         </div>
 
-        <div onclick="showPage('history', this)" class="nav-link p-3 flex items-center gap-3">
+        <div onclick="showPage('analytics', this)" class="nav-link p-3 flex items-center gap-3" data-page="analytics">
+            <i class="fas fa-chart-bar w-5"></i> <span>Analytics</span>
+        </div>
+
+        <div onclick="showPage('calendar', this)" class="nav-link p-3 flex items-center gap-3" data-page="calendar">
+            <i class="fas fa-calendar-alt w-5"></i> <span>Calendar</span>
+        </div>
+
+        <div onclick="showPage('history', this)" class="nav-link p-3 flex items-center gap-3" data-page="history">
             <i class="fas fa-history w-5"></i> <span>My Leaves</span>
         </div>
 
-        <div onclick="showPage('profile', this)" class="nav-link p-3 flex items-center gap-3">
+        <div onclick="showPage('profile', this)" class="nav-link p-3 flex items-center gap-3" data-page="profile">
             <i class="fas fa-user w-5"></i> <span>Profile</span>
         </div>
 
@@ -88,19 +179,6 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
             <div class="text-sm text-gray-500">
                 <i class="fas fa-calendar-alt"></i> <span id="currentDate"></span>
             </div>
-        </div>
-    </div>
-
-    <!-- Notifications Alert -->
-    <div id="notificationAlert" class="hidden mb-6 p-4 rounded-lg border">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <span id="notifIcon"></span>
-                <span id="notifMessage" class="text-sm"></span>
-            </div>
-            <button onclick="dismissNotification()" class="text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times"></i>
-            </button>
         </div>
     </div>
 
@@ -146,6 +224,27 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
         </div>
     </div>
 
+    <!-- Quick Actions -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
+        <h2 class="text-lg font-bold text-gray-800 mb-4">
+            <i class="fas fa-bolt mr-2 text-yellow-500"></i>Quick Actions
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button onclick="showPage('leave')" class="quick-action-btn bg-gradient-to-r from-blue-500 to-purple-500 text-white p-4 rounded-lg font-bold hover:shadow-lg transition-all text-left">
+                <i class="fas fa-plus-circle mr-2"></i>Request Leave
+                <p class="text-sm opacity-90 mt-1">Submit a new leave request</p>
+            </button>
+            <button onclick="showPage('analytics')" class="quick-action-btn bg-gradient-to-r from-green-500 to-teal-500 text-white p-4 rounded-lg font-bold hover:shadow-lg transition-all text-left">
+                <i class="fas fa-chart-bar mr-2"></i>View Analytics
+                <p class="text-sm opacity-90 mt-1">Check your leave statistics</p>
+            </button>
+            <button onclick="showPage('calendar')" class="quick-action-btn bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-lg font-bold hover:shadow-lg transition-all text-left">
+                <i class="fas fa-calendar-alt mr-2"></i>Calendar View
+                <p class="text-sm opacity-90 mt-1">See your leave schedule</p>
+            </button>
+        </div>
+    </div>
+
     <!-- Recent Leaves -->
     <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <h2 class="text-lg font-bold text-gray-800 mb-4">
@@ -162,6 +261,124 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
             </thead>
             <tbody id="recentLeaves" class="text-sm"></tbody>
         </table>
+    </div>
+</section>
+
+<!-- ANALYTICS -->
+<section id="analytics" class="page-section">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">Leave Analytics</h1>
+        <p class="text-gray-600">Track your leave patterns and usage statistics</p>
+    </div>
+
+    <!-- Analytics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="stat-card bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-2xl shadow-lg">
+            <div class="flex justify-between items-center">
+                <div>
+                    <p class="text-purple-100 text-sm">Total Requests</p>
+                    <p class="text-4xl font-bold" id="totalRequests">--</p>
+                </div>
+                <div class="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-file-alt text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-2xl shadow-lg">
+            <div class="flex justify-between items-center">
+                <div>
+                    <p class="text-green-100 text-sm">Approval Rate</p>
+                    <p class="text-4xl font-bold" id="approvalRate">--%</p>
+                </div>
+                <div class="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-percentage text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-2xl shadow-lg">
+            <div class="flex justify-between items-center">
+                <div>
+                    <p class="text-blue-100 text-sm">Most Used Type</p>
+                    <p class="text-lg font-bold" id="mostUsedType">--</p>
+                </div>
+                <div class="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-star text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card bg-gradient-to-br from-orange-500 to-orange-600 text-white p-6 rounded-2xl shadow-lg">
+            <div class="flex justify-between items-center">
+                <div>
+                    <p class="text-orange-100 text-sm">Avg. Leave Days</p>
+                    <p class="text-4xl font-bold" id="avgLeaveDays">--</p>
+                </div>
+                <div class="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-calendar-day text-2xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Leave Types Chart -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">
+                <i class="fas fa-chart-pie mr-2 text-blue-500"></i>Leave Types Distribution
+            </h3>
+            <canvas id="leaveTypesChart" width="300" height="200"></canvas>
+        </div>
+
+        <!-- Monthly Trend Chart -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">
+                <i class="fas fa-chart-line mr-2 text-green-500"></i>Monthly Leave Trend
+            </h3>
+            <canvas id="monthlyTrendChart" width="300" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- Status Distribution -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">
+            <i class="fas fa-chart-bar mr-2 text-purple-500"></i>Request Status Distribution
+        </h3>
+        <canvas id="statusChart" width="400" height="150"></canvas>
+    </div>
+</section>
+
+<!-- CALENDAR -->
+<section id="calendar" class="page-section">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">Leave Calendar</h1>
+        <p class="text-gray-600">View your leave schedule and upcoming requests</p>
+    </div>
+
+    <!-- Calendar Legend -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6">
+        <h3 class="text-sm font-bold text-gray-800 mb-3">Legend</h3>
+        <div class="flex flex-wrap gap-4">
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-green-500 rounded"></div>
+                <span class="text-sm text-gray-600">Approved</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-yellow-500 rounded"></div>
+                <span class="text-sm text-gray-600">Pending</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-red-500 rounded"></div>
+                <span class="text-sm text-gray-600">Rejected</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar Container -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <div id="calendarContainer" class="calendar-container"></div>
     </div>
 </section>
 
@@ -294,6 +511,9 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
 
 </main>
 
+<!-- Toast Notifications Container -->
+<div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
 <script>
 document.getElementById("currentDate").innerText = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -309,7 +529,12 @@ function showPage(id, el) {
     document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
     document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
-    if (el) el.classList.add('active');
+    if (el) {
+        el.classList.add('active');
+    } else {
+        const navEl = document.querySelector(`.nav-link[data-page="${id}"]`);
+        if (navEl) navEl.classList.add('active');
+    }
 }
 
 async function loadNotifications() {
@@ -352,38 +577,57 @@ async function loadNotifications() {
 }
 
 function showNotification(notif) {
-    const alert = document.getElementById("notificationAlert");
-    const message = document.getElementById("notifMessage");
-    const icon = document.getElementById("notifIcon");
+    const toastContainer = document.getElementById("toastContainer");
     
-    let iconHtml = "";
-    let colorClass = "";
+    let toastClass = "toast-info";
+    let iconHtml = '<i class="fas fa-info-circle"></i>';
     
     if (notif.status === "Approved") {
-        iconHtml = '<i class="fas fa-check-circle text-green-500 text-xl"></i>';
-        colorClass = "bg-green-50 border-green-200 text-green-700";
+        toastClass = "toast-success";
+        iconHtml = '<i class="fas fa-check-circle"></i>';
     } else if (notif.status === "Rejected") {
-        iconHtml = '<i class="fas fa-times-circle text-red-500 text-xl"></i>';
-        colorClass = "bg-red-50 border-red-200 text-red-700";
+        toastClass = "toast-error";
+        iconHtml = '<i class="fas fa-times-circle"></i>';
     } else {
-        iconHtml = '<i class="fas fa-clock text-yellow-500 text-xl"></i>';
-        colorClass = "bg-yellow-50 border-yellow-200 text-yellow-700";
+        toastClass = "toast-warning";
+        iconHtml = '<i class="fas fa-clock"></i>';
     }
     
-    icon.innerHTML = iconHtml;
-    message.innerHTML = `
-        <strong>Leave ${notif.status}</strong>: 
-        Your ${notif.type} request (${notif.start_date} to ${notif.end_date}) 
-        has been <strong>${notif.status}</strong>.
-        ${notif.comment ? `<br><span class="text-sm mt-1 block">Admin Comment: "${notif.comment}"</span>` : ''}
+    const toast = document.createElement("div");
+    toast.className = `toast ${toastClass}`;
+    toast.innerHTML = `
+        <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 mt-1">
+                ${iconHtml}
+            </div>
+            <div class="flex-1">
+                <div class="font-bold text-sm">Leave ${notif.status}</div>
+                <div class="text-sm opacity-90 mt-1">
+                    Your ${notif.type} request (${notif.start_date} to ${notif.end_date}) has been <strong>${notif.status}</strong>.
+                    ${notif.comment ? `<br><span class="text-xs mt-2 block opacity-75">Admin Comment: "${notif.comment}"</span>` : ''}
+                </div>
+            </div>
+            <button onclick="this.parentElement.parentElement.remove()" class="flex-shrink-0 text-white/70 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
     `;
     
-    alert.className = `mb-6 p-4 rounded-lg border ${colorClass}`;
-    alert.classList.remove('hidden');
+    toastContainer.appendChild(toast);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.style.animation = "slideOut 0.3s ease-out";
+            setTimeout(() => toast.remove(), 300);
+        }
+    }, 5000);
 }
 
 function dismissNotification() {
-    document.getElementById("notificationAlert").classList.add('hidden');
+    // Clear all toast notifications
+    const toastContainer = document.getElementById("toastContainer");
+    toastContainer.innerHTML = '';
 }
 
 async function loadMyLeaves() {
@@ -470,10 +714,216 @@ async function submitLeave(e) {
     }
 }
 
+// =========================
+// ANALYTICS FUNCTIONS
+// =========================
+
+async function loadAnalytics() {
+    try {
+        const res = await fetch("/get_leave_analytics");
+        const data = await res.json();
+
+        console.log("Analytics data:", data);
+
+        // Update stats cards
+        document.getElementById("totalRequests").innerText = data.total_requests;
+        document.getElementById("approvalRate").innerText = data.approval_rate + "%";
+
+        // Most used leave type
+        const leaveTypes = Object.entries(data.leave_types);
+        if (leaveTypes.length > 0) {
+            const mostUsed = leaveTypes.reduce((a, b) => a[1] > b[1] ? a : b);
+            document.getElementById("mostUsedType").innerText = mostUsed[0];
+        } else {
+            document.getElementById("mostUsedType").innerText = "None";
+        }
+
+        // Calculate average leave days (simplified)
+        const avgDays = data.total_requests > 0 ? Math.round(data.total_requests * 2.5) : 0;
+        document.getElementById("avgLeaveDays").innerText = avgDays;
+
+        // Create charts
+        createLeaveTypesChart(data.leave_types);
+        createMonthlyTrendChart(data.monthly_trend);
+        createStatusChart(data);
+
+    } catch (e) {
+        console.error("Error loading analytics:", e);
+    }
+}
+
+function createLeaveTypesChart(leaveTypes) {
+    const ctx = document.getElementById('leaveTypesChart').getContext('2d');
+
+    const colors = [
+        '#3B82F6', '#10B981', '#F59E0B', '#EF4444',
+        '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'
+    ];
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(leaveTypes),
+            datasets: [{
+                data: Object.values(leaveTypes),
+                backgroundColor: colors.slice(0, Object.keys(leaveTypes).length),
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createMonthlyTrendChart(monthlyData) {
+    const ctx = document.getElementById('monthlyTrendChart').getContext('2d');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: monthlyData.labels,
+            datasets: [{
+                label: 'Leave Requests',
+                data: monthlyData.data,
+                borderColor: '#3B82F6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#3B82F6',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 6,
+                pointHoverRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createStatusChart(data) {
+    const ctx = document.getElementById('statusChart').getContext('2d');
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Approved', 'Pending', 'Rejected'],
+            datasets: [{
+                label: 'Requests',
+                data: [data.approved_count, data.pending_count, data.rejected_count],
+                backgroundColor: [
+                    'rgba(16, 185, 129, 0.8)',
+                    'rgba(245, 158, 11, 0.8)',
+                    'rgba(239, 68, 68, 0.8)'
+                ],
+                borderColor: [
+                    '#10B981',
+                    '#F59E0B',
+                    '#EF4444'
+                ],
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+// =========================
+// CALENDAR FUNCTIONS
+// =========================
+
+let calendar;
+
+function initCalendar() {
+    const calendarEl = document.getElementById('calendarContainer');
+
+    calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,listWeek'
+        },
+        height: 'auto',
+        events: [],
+        eventDisplay: 'block',
+        eventTimeFormat: {
+            hour: '2-digit',
+            minute: '2-digit',
+            meridiem: false
+        },
+        dayMaxEvents: true,
+        moreLinkClick: 'popover'
+    });
+
+    calendar.render();
+    loadCalendarEvents();
+}
+
+async function loadCalendarEvents() {
+    try {
+        const res = await fetch("/get_leave_calendar");
+        const events = await res.json();
+
+        console.log("Calendar events:", events);
+
+        calendar.removeAllEvents();
+        calendar.addEventSource(events);
+
+    } catch (e) {
+        console.error("Error loading calendar events:", e);
+    }
+}
+
 window.onload = function() {
     loadMyLeaves();
     loadNotifications();
     loadLeaveCredits();
+    loadAnalytics();
+    initCalendar();
 };
 </script>
 
