@@ -251,6 +251,22 @@ def update_leave_status():
             notification_service.notify_leave_status_change(
                 leave.username, leave_id, status, comment
             )
+            
+            # Send email/SMS notification
+            user = data_manager.get_user_by_username(leave.username)
+            if user:
+                subject = f"Leave Request {status}"
+                body = f"Your leave request (ID: {leave_id}) has been {status}."
+                if comment:
+                    body += f" Comment: {comment}"
+                
+                # Send email if user has email
+                if user.email:
+                    notification_service.send_email_notification(user.email, subject, body)
+                
+                # Send SMS if user has phone
+                if user.phone:
+                    notification_service.send_sms_notification(user.phone, body)
 
     return jsonify({"message": f"{status} successfully"})
 
@@ -303,6 +319,34 @@ def get_app_notifications():
     
     notifications = notification_service.get_notifications(username, unread_only)
     return jsonify(notifications)
+
+
+@app.route("/get_notifications_since")
+def get_notifications_since():
+    """Get notifications since a specific timestamp for real-time updates"""
+    if "username" not in session:
+        return jsonify([]), 403
+    
+    username = session["username"]
+    since_timestamp = request.args.get("since", "")
+    
+    if not since_timestamp:
+        return jsonify([]), 400
+    
+    try:
+        since_dt = datetime.strptime(since_timestamp, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return jsonify([]), 400
+    
+    notifications = notification_service.get_notifications(username, unread_only=False)
+    
+    # Filter notifications newer than since_timestamp
+    recent_notifications = [
+        n for n in notifications 
+        if datetime.strptime(n["timestamp"], "%Y-%m-%d %H:%M:%S") > since_dt
+    ]
+    
+    return jsonify(recent_notifications)
 
 
 @app.route("/get_unread_notification_count")

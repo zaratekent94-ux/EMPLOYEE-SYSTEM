@@ -3,7 +3,7 @@
 # USER ACCOUNTS (Inheritance & Polymorphism)
 # =========================
 
-from data import data_manager
+from data import data_manager, notification_service
 from models import UserModel, LeaveRequestModel
 from datetime import datetime
 from abc import ABC, abstractmethod
@@ -57,6 +57,7 @@ class User(BaseUser):
                 "dept": self._user_model.dept,
                 "position": self._user_model.position,
                 "phone": self._user_model.phone,
+                "email": self._user_model.email,
                 "leave_credits": self._user_model.leave_credits
             }
         return None
@@ -97,7 +98,17 @@ class Employee(User):
             seen=False
         )
         
-        return self._data_manager.add_leave_request(leave_request)
+        success = self._data_manager.add_leave_request(leave_request)
+        
+        # Notify admin of new leave request
+        if success:
+            admins = self._data_manager.get_users_by_role("admin")
+            for admin in admins:
+                notification_service.notify_new_leave_request(
+                    admin.username, self._username, leave_id, data.get("type")
+                )
+        
+        return success
     
     def get_my_leave(self) -> list:
         """Get user's leave requests"""
@@ -146,7 +157,8 @@ class Admin(User):
             dept=data.get("dept"),
             position=data.get("position"),
             phone=data.get("phone"),
-            leave_credits=15
+            leave_credits=15,
+            email=data.get("email", "")
         )
         
         return self._data_manager.add_user(new_user)
@@ -164,6 +176,8 @@ class Admin(User):
             update_data["position"] = data.get("position")
         if data.get("phone"):
             update_data["phone"] = data.get("phone")
+        if data.get("email"):
+            update_data["email"] = data.get("email")
         if data.get("password"):
             update_data["password"] = data.get("password")
         
@@ -182,7 +196,8 @@ class Admin(User):
                 "name": emp.name,
                 "dept": emp.dept,
                 "position": emp.position,
-                "phone": emp.phone
+                "phone": emp.phone,
+                "email": emp.email
             }
             for emp in employees
         ]

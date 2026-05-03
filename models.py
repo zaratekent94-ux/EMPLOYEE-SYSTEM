@@ -11,7 +11,7 @@ class UserModel:
     """Base user model with encapsulated data"""
     
     def __init__(self, username: str, password: str, role: str, name: str = "", 
-                 dept: str = "", position: str = "", phone: str = "", leave_credits: int = 15):
+                 dept: str = "", position: str = "", phone: str = "", leave_credits: int = 15, email: str = ""):
         self._username = username
         self._password = password
         self._role = role
@@ -20,6 +20,7 @@ class UserModel:
         self._position = position
         self._phone = phone
         self._leave_credits = leave_credits
+        self._email = email
     
     # Getters (Encapsulation)
     @property
@@ -54,6 +55,10 @@ class UserModel:
     def leave_credits(self) -> int:
         return self._leave_credits
     
+    @property
+    def email(self) -> str:
+        return self._email
+    
     # Setters (Encapsulation - controlled access)
     @username.setter
     def username(self, value: str):
@@ -83,6 +88,10 @@ class UserModel:
     def leave_credits(self, value: int):
         self._leave_credits = value
     
+    @email.setter
+    def email(self, value: str):
+        self._email = value
+    
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -93,7 +102,8 @@ class UserModel:
             "dept": self._dept,
             "position": self._position,
             "phone": self._phone,
-            "leave_credits": self._leave_credits
+            "leave_credits": self._leave_credits,
+            "email": self._email
         }
     
     @classmethod
@@ -107,7 +117,8 @@ class UserModel:
             dept=data.get("dept", ""),
             position=data.get("position", ""),
             phone=data.get("phone", ""),
-            leave_credits=data.get("leave_credits", 15)
+            leave_credits=data.get("leave_credits", 15),
+            email=data.get("email", "")
         )
 
 

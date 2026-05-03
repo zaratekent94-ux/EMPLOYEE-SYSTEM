@@ -5,6 +5,7 @@
 
 from models import UserModel, LeaveRequestModel, LeaveCreditHistoryModel
 from typing import List, Optional, Dict, Any
+from datetime import datetime
 
 
 class DataManager:
@@ -38,14 +39,14 @@ class DataManager:
     def _initialize_default_data(self):
         """Initialize default users"""
         default_users = [
-            UserModel("admin", "1", "admin", "Administrator", "IT", "System Admin", "+1234567890", 0),
-            UserModel("john", "1", "user", "John Doe", "Engineering", "Software Engineer", "+1987654321", 30),
-            UserModel("jane", "1", "user", "Jane Smith", "Human Resources", "HR Manager", "+1123456789", 30),
-            UserModel("alice", "1", "user", "Alice Johnson", "Marketing", "Marketing Specialist", "+1098765432", 30),
-            UserModel("bob", "1", "user", "Bob Brown", "Sales", "Sales Representative", "+1023456789", 30),
-            UserModel("charlie", "1", "user", "Charlie Davis", "Finance", "Financial Analyst", "+1012345678", 30),
-            UserModel("dave", "1", "user", "Dave Wilson", "Customer Support", "Support Specialist", "+1001234567", 30),  
-            UserModel("eve", "1", "user", "Eve Miller", "Research and Development", "R&D Engineer", "+1234509876", 30)  
+            UserModel("admin", "1", "admin", "Administrator", "IT", "System Admin", "+1234567890", 0, "admin@company.com"),
+            UserModel("john", "1", "user", "John Doe", "Engineering", "Software Engineer", "+1987654321", 30, "john.doe@company.com"),
+            UserModel("jane", "1", "user", "Jane Smith", "Human Resources", "HR Manager", "+1123456789", 30, "jane.smith@company.com"),
+            UserModel("alice", "1", "user", "Alice Johnson", "Marketing", "Marketing Specialist", "+1098765432", 30, "alice.johnson@company.com"),
+            UserModel("bob", "1", "user", "Bob Brown", "Sales", "Sales Representative", "+1023456789", 30, "bob.brown@company.com"),
+            UserModel("charlie", "1", "user", "Charlie Davis", "Finance", "Financial Analyst", "+1012345678", 30, "charlie.davis@company.com"),
+            UserModel("dave", "1", "user", "Dave Wilson", "Customer Support", "Support Specialist", "+1001234567", 30, "dave.wilson@company.com"),  
+            UserModel("eve", "1", "user", "Eve Miller", "Research and Development", "R&D Engineer", "+1234509876", 30, "eve.miller@company.com")  
         ]
         self._users = default_users
     
@@ -95,6 +96,8 @@ class DataManager:
             user.position = kwargs["position"]
         if "phone" in kwargs and kwargs["phone"]:
             user.phone = kwargs["phone"]
+        if "email" in kwargs and kwargs["email"]:
+            user.email = kwargs["email"]
         if "password" in kwargs and kwargs["password"]:
             user.password = kwargs["password"]
         
@@ -390,6 +393,24 @@ class NotificationService:
         Send email notification (placeholder - integrate with SMTP/email service)
         Returns status of the send operation
         """
+        # Anti-spam checks
+        if len(subject) > 200:
+            return {"success": False, "error": "Subject too long (max 200 characters)"}
+        
+        if len(body) > 5000:
+            return {"success": False, "error": "Body too long (max 5000 characters)"}
+        
+        # Check for spam patterns
+        spam_keywords = ["free", "win", "prize", "urgent", "click here", "buy now"]
+        body_lower = body.lower()
+        if any(keyword in body_lower for keyword in spam_keywords):
+            return {"success": False, "error": "Message flagged as potential spam"}
+        
+        # Check for excessive URLs
+        url_count = body_lower.count("http")
+        if url_count > 3:
+            return {"success": False, "error": "Too many URLs (max 3)"}
+        
         # Placeholder for email integration
         # In production, integrate with SMTP, SendGrid, etc.
         return {
@@ -405,6 +426,25 @@ class NotificationService:
         Send SMS notification (placeholder - integrate with SMS gateway)
         Returns status of the send operation
         """
+        # Anti-spam checks
+        if len(message) > 160:  # Standard SMS length
+            return {"success": False, "error": "Message too long (max 160 characters)"}
+        
+        # Check for spam patterns
+        spam_keywords = ["free", "win", "prize", "urgent", "call now", "text back"]
+        message_lower = message.lower()
+        if any(keyword in message_lower for keyword in spam_keywords):
+            return {"success": False, "error": "Message flagged as potential spam"}
+        
+        # Check for excessive URLs or phone numbers
+        url_count = message_lower.count("http")
+        if url_count > 1:
+            return {"success": False, "error": "Too many URLs in SMS"}
+        
+        phone_count = len([word for word in message.split() if word.replace("-", "").replace("(", "").replace(")", "").isdigit() and len(word) > 7])
+        if phone_count > 1:
+            return {"success": False, "error": "Too many phone numbers in SMS"}
+        
         # Placeholder for SMS integration
         # In production, integrate with Twilio, Nexmo, etc.
         return {
