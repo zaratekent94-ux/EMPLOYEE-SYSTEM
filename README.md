@@ -116,3 +116,11 @@ Notifications can be delivered through email or SMS, allowing users to receive u
 
 # Vercel.app
 https://employee-system-7gti.vercel.app/user_dashboard
+
+# admin username and password
+username = admin
+password = 1
+
+# employee username and password
+username = eve
+password = 1
